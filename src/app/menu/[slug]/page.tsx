@@ -25,6 +25,13 @@ export default function CustomerMenuPage() {
     } catch {}
   }, []);
 
+  // Function to refresh menu data
+  const refreshMenuData = useCallback(() => {
+    fetchMenuItems().then((data) => {
+      if (data && Array.isArray(data) && data.length > 0) setItems(data);
+    }).catch(() => {});
+  }, []);
+
   // Fetch fresh menu data from Supabase on every load
   useEffect(() => {
     setLoading(true);
@@ -33,6 +40,15 @@ export default function CustomerMenuPage() {
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [slug]);
+
+  // Auto-refresh menu data when window regains focus (e.g., returning from admin panel)
+  useEffect(() => {
+    const handleWindowFocus = () => {
+      refreshMenuData();
+    };
+    window.addEventListener("focus", handleWindowFocus);
+    return () => window.removeEventListener("focus", handleWindowFocus);
+  }, [refreshMenuData]);
 
   const handleItemClick = useCallback((item: MenuItem) => {
     const updated: MenuItem = { ...item, clicks: item.clicks + 1, views: item.views + 1 };

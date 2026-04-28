@@ -2,12 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { initialMenuItems, MenuItem } from "@/data/menuData";
-import { fetchMenuItems, createMenuItem, updateMenuItem, deleteMenuItem } from "@/lib/supabase";
+import { fetchMenuItems, createMenuItem, updateMenuItem, deleteMenuItem, getSupabaseStatus } from "@/lib/supabase";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 
 export default function AdminPage() {
   const [items, setItems]     = useState<MenuItem[]>(initialMenuItems);
   const [loading, setLoading] = useState(true);
+
+  // Log Supabase configuration on mount for debugging
+  useEffect(() => {
+    const status = getSupabaseStatus();
+    console.log("🔍 Supabase Status:", status);
+  }, []);
 
   useEffect(() => {
     fetchMenuItems().then((data) => {
