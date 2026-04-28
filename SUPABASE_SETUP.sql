@@ -20,11 +20,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
 ALTER TABLE menu_items ENABLE ROW LEVEL SECURITY;
 
 -- 3. Allow public reads
--- Allow RPC updates (clicks/views)
-CREATE POLICY "Allow update via RPC"
-ON menu_items
-FOR UPDATE
-USING (true);
+CREATE POLICY "Public read" ON menu_items FOR SELECT USING (true);
 
 -- 4. Increment click function
 CREATE OR REPLACE FUNCTION increment_click(item_id INT)
@@ -66,3 +62,14 @@ INSERT INTO menu_items (name, price, category, image, description, available, fe
 ('Mango Lassi', 79, 'Beverages', 'https://images.unsplash.com/photo-1590080876614-bc8104e62908?w=400&h=300&fit=crop', 'Thick yogurt drink blended with Alphonso mango pulp. Summer favourite.', true, false, 'fast', 'medium', 45, 189),
 ('Sweet Lassi', 69, 'Beverages', 'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400&h=300&fit=crop', 'Chilled yogurt blended with sugar and cardamom. Refreshingly light.', true, false, 'fast', 'medium', 37, 134),
 ('Masala Chai', 39, 'Beverages', 'https://images.unsplash.com/photo-1567922045116-2a00fae2ed03?w=400&h=300&fit=crop', 'Spiced tea brewed with ginger, cardamom and cinnamon. The classic.', true, false, 'fast', 'medium', 189, 467);
+
+-- 7. Grant anon role permission to call the RPC functions
+-- Without these, the increment calls will silently 403 and counts won't update in DB
+GRANT EXECUTE ON FUNCTION increment_click(INT) TO anon;
+GRANT EXECUTE ON FUNCTION increment_view(INT) TO anon;
+
+-- 8. Allow anonymous users to INSERT, UPDATE, DELETE (for admin CRUD)
+-- NOTE: In production, replace `anon` with an authenticated role and add auth checks
+CREATE POLICY "Public insert" ON menu_items FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public update" ON menu_items FOR UPDATE USING (true);
+CREATE POLICY "Public delete" ON menu_items FOR DELETE USING (true);

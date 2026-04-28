@@ -1,116 +1,104 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import MenuPage from "@/components/MenuPage";
-import ItemModal from "@/components/ItemModal";
-import OwnerDashboard from "@/components/OwnerDashboard";
-import { initialMenuItems, MenuItem } from "@/data/menuData";
-import { fetchMenuItems, incrementClick, incrementView } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
 
-type View = "menu" | "owner";
+// Default restaurant slug — in production each restaurant gets their own
+const DEFAULT_SLUG = "cafe-delight";
 
-const CACHE_KEY = "ghostMenuCache";
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+export default function WelcomePage() {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [savedName, setSavedName] = useState("");
+  const [mounted, setMounted] = useState(false);
 
-function loadCachedItems(): MenuItem[] | null {
-  try {
-    const raw = localStorage.getItem(CACHE_KEY);
-    if (!raw) return null;
-    const { items, timestamp } = JSON.parse(raw);
-    if (Date.now() - timestamp > CACHE_TTL) return null;
-    return items;
-  } catch {
-    return null;
-  }
-}
-
-function saveCachedItems(items: MenuItem[]) {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ items, timestamp: Date.now() }));
-  } catch {}
-}
-
-export default function Home() {
-  const [view, setView] = useState<View>("menu");
-  const [items, setItems] = useState<MenuItem[]>(initialMenuItems);
-  const [kitchenStatus, setKitchenStatus] = useState<"normal" | "busy">("normal");
-  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
-
-  // Hydrate from Supabase on mount (with localStorage cache fallback)
   useEffect(() => {
-    const cached = loadCachedItems();
-    if (cached) {
-      setItems(cached);
-      return;
-    }
-    fetchMenuItems().then((data) => {
-      if (data && Array.isArray(data) && data.length > 0) {
-        setItems(data);
-        saveCachedItems(data);
-      }
-    });
+    setMounted(true);
+    try {
+      const stored = localStorage.getItem("ghostMenuGuestName");
+      if (stored) setSavedName(stored);
+    } catch {}
   }, []);
 
-  const handleItemClick = (item: MenuItem) => {
-    // Optimistic local update
-    setItems((prev: MenuItem[]) =>
-      prev.map((i: MenuItem) => (i.id === item.id ? { ...i, clicks: i.clicks + 1 } : i))
-    );
-    // Persist to Supabase (fire-and-forget)
-    incrementClick(item.id);
-    setSelectedItem(item);
-  };
-
-  const handleModalClose = () => {
-    if (selectedItem) {
-      setItems((prev: MenuItem[]) =>
-        prev.map((i: MenuItem) => (i.id === selectedItem.id ? { ...i, views: i.views + 1 } : i))
-      );
-      incrementView(selectedItem.id);
+  const handleEnter = () => {
+    const trimmed = name.trim();
+    if (trimmed) {
+      try { localStorage.setItem("ghostMenuGuestName", trimmed); } catch {}
     }
-    setSelectedItem(null);
+    router.push(`/menu/${DEFAULT_SLUG}`);
   };
 
-  const handleComboItemClick = (item: MenuItem) => {
-    setSelectedItem(null);
-    setTimeout(() => {
-      setSelectedItem(item);
-      handleItemClick(item);
-    }, 200);
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") handleEnter();
   };
+
+  if (!mounted) return null;
 
   return (
-    <>
-      {view === "menu" ? (
-        <MenuPage items={items} kitchenStatus={kitchenStatus} onItemClick={handleItemClick} />
-      ) : (
-        <OwnerDashboard
-          items={items}
-          kitchenStatus={kitchenStatus}
-          onKitchenStatusChange={setKitchenStatus}
-          onItemsChange={setItems}
-        />
-      )}
+    <div className="min-h-screen bg-stone-900 flex flex-col items-center justify-center px-6 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-32 -right-32 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-orange-600/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-stone-800/50 rounded-full blur-3xl" />
+      </div>
 
-      <ItemModal item={selectedItem} onClose={handleModalClose} onComboItemClick={handleComboItemClick} />
-
-      {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-stone-200 z-40">
-        <div className="max-w-md mx-auto flex">
-          {(["menu", "owner"] as View[]).map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className={`flex-1 py-3 text-xs font-semibold transition-colors flex flex-col items-center gap-0.5 ${
-                view === v ? "text-orange-600" : "text-stone-400 hover:text-stone-600"
-              }`}
-            >
-              <span className="text-lg leading-none">{v === "menu" ? "🍽️" : "⚙️"}</span>
-              <span>{v === "menu" ? "Menu" : "Admin"}</span>
-            </button>
-          ))}
+      <div className="relative z-10 w-full max-w-sm animate-slideUp">
+        {/* Logo / Brand */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-500 rounded-2xl mb-4 shadow-lg shadow-orange-500/30">
+            <span className="text-3xl">🍽️</span>
+          </div>
+          <h1 className="font-display text-3xl font-bold text-white tracking-tight">Ghost Menu</h1>
+          <p className="text-stone-400 mt-2 text-sm">Cafe Delight · QR Menu</p>
         </div>
-      </nav>
-    </>
+
+        {/* Welcome card */}
+        <div className="bg-stone-800/80 backdrop-blur-sm border border-stone-700 rounded-3xl p-6 shadow-2xl">
+          {savedName ? (
+            <div className="mb-4">
+              <p className="text-stone-400 text-sm mb-1">Welcome back,</p>
+              <p className="text-white font-semibold text-lg">{savedName} 👋</p>
+            </div>
+          ) : (
+            <p className="text-stone-300 text-sm mb-5 leading-relaxed">
+              Enter your name to personalise your experience, or jump straight in.
+            </p>
+          )}
+
+          <div className="space-y-3">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Your name (optional)"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={handleKeyDown}
+                maxLength={32}
+                className="w-full bg-stone-700/60 border border-stone-600 text-white placeholder-stone-500 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500 focus:bg-stone-700 transition-all"
+              />
+            </div>
+
+            <button
+              onClick={handleEnter}
+              className="w-full bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-semibold rounded-2xl py-3.5 text-sm transition-all shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40"
+            >
+              {name.trim() ? `Continue as ${name.trim()}` : "View Menu →"}
+            </button>
+          </div>
+        </div>
+
+        {/* QR hint */}
+        <div className="flex items-center gap-3 mt-5 px-2">
+          <div className="flex-1 h-px bg-stone-700" />
+          <p className="text-stone-600 text-xs whitespace-nowrap">scan QR at your table</p>
+          <div className="flex-1 h-px bg-stone-700" />
+        </div>
+
+        <p className="text-center text-stone-600 text-xs mt-4">
+          Powered by Ghost Menu
+        </p>
+      </div>
+    </div>
   );
 }
