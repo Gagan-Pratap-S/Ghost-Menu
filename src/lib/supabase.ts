@@ -92,13 +92,25 @@ export async function signIn(email: string, password: string) {
   console.log("AUTH DATA:", data);
   console.log("AUTH ERROR:", error);
 
-  if (error) {
-    return { session: null, error: error.message };
+  if (error || !data.session) {
+    return { session: null, error: error?.message ?? "Login failed" };
   }
 
-  return { session: data.session, error: null };
-}
+  const s = data.session;
 
+  // ✅ MAP Supabase Session → your AuthSession
+  const session: AuthSession = {
+    access_token: s.access_token,
+    refresh_token: s.refresh_token,
+    expires_in: s.expires_in ?? 3600,
+    user: {
+      id: s.user.id,
+      email: s.user.email ?? "", // 🔥 FIX: ensure string
+    },
+  };
+
+  return { session, error: null };
+}
 export async function signOut() {
   await supabase.auth.signOut();
 }
