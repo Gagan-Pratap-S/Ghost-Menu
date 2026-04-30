@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import Image from "next/image";
 import { MenuItem, comboSuggestions, initialMenuItems } from "@/data/menuData";
+import { useCart } from "@/context/CartContext";
 
 interface Props {
   item: MenuItem | null;
@@ -11,6 +12,8 @@ interface Props {
 }
 
 export default function ItemModal({ item, onClose, onComboItemClick }: Props) {
+  const { items: cartItems, add, increment, decrement } = useCart();
+
   useEffect(() => {
     document.body.style.overflow = item ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -18,19 +21,22 @@ export default function ItemModal({ item, onClose, onComboItemClick }: Props) {
 
   if (!item) return null;
 
+  const cartEntry = cartItems.find(i => i.id === item.id);
+  const qty       = cartEntry?.quantity ?? 0;
+
   const comboItems = (comboSuggestions[item.name] ?? [])
-    .map((name) => initialMenuItems.find((i) => i.name === name))
+    .map(name => initialMenuItems.find(i => i.name === name))
     .filter(Boolean) as MenuItem[];
 
   const prepLabel = { fast: "⚡ Quick (5–10 min)", medium: "⏱ ~15 min", slow: "🕐 ~30 min" }[item.prep_time];
   const prepColor = { fast: "bg-emerald-100 text-emerald-700", medium: "bg-yellow-100 text-yellow-700", slow: "bg-red-100 text-red-600" }[item.prep_time];
 
+  const handleAdd = () => add({ id: item.id, name: item.name, price: item.price, image: item.image });
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={item.name}>
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fadeIn" onClick={onClose} />
 
-      {/* Sheet */}
       <div className="relative w-full max-w-md bg-white rounded-t-3xl max-h-[92vh] overflow-y-auto shadow-2xl animate-slideUp">
         {/* Close */}
         <button onClick={onClose} aria-label="Close"
@@ -43,10 +49,8 @@ export default function ItemModal({ item, onClose, onComboItemClick }: Props) {
 
         {/* Image */}
         <div className="relative h-52 w-full bg-stone-200 overflow-hidden rounded-t-3xl">
-          <Image src={item.image} alt={item.name} fill sizes="448px"
-            className="object-cover" priority
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-          />
+          <Image src={item.image} alt={item.name} fill sizes="448px" className="object-cover" priority
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
           {item.tag && (
             <span className={`absolute bottom-3 left-4 px-3 py-1 text-xs font-bold rounded-full shadow ${
               item.tag.includes("Popular") ? "bg-orange-500 text-white" : "bg-amber-400 text-amber-900"
@@ -54,7 +58,6 @@ export default function ItemModal({ item, onClose, onComboItemClick }: Props) {
           )}
         </div>
 
-        {/* Content */}
         <div className="p-5">
           <div className="flex items-start justify-between gap-2 mb-2">
             <h2 className="font-display text-xl font-bold text-stone-900 leading-snug flex-1">{item.name}</h2>
@@ -77,7 +80,7 @@ export default function ItemModal({ item, onClose, onComboItemClick }: Props) {
               <p className="font-display font-bold text-sm text-orange-900 mb-1">🎯 Make it a combo</p>
               <p className="text-xs text-orange-600 mb-3">Pairs perfectly with:</p>
               <div className="flex flex-wrap gap-2">
-                {comboItems.map((ci) => (
+                {comboItems.map(ci => (
                   <button key={ci.id} onClick={() => onComboItemClick?.(ci)}
                     className="flex items-center gap-1.5 bg-white border border-orange-200 rounded-xl px-2.5 py-1.5 text-xs font-medium text-orange-800 hover:bg-orange-100 active:scale-95 transition-all"
                   >
@@ -89,12 +92,32 @@ export default function ItemModal({ item, onClose, onComboItemClick }: Props) {
             </div>
           )}
 
+          {/* Add to cart CTA */}
+          {qty === 0 ? (
+            <button onClick={handleAdd}
+              className="w-full py-3.5 bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-display font-bold rounded-2xl text-sm transition-colors shadow-md shadow-orange-200"
+            >
+              Add to Cart · ₹{item.price}
+            </button>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-1 bg-stone-50 rounded-2xl px-4 py-3">
+                <button onClick={() => decrement(item.id)}
+                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-white border border-stone-200 text-stone-700 font-bold hover:bg-stone-100 active:scale-90 transition-all"
+                >−</button>
+                <span className="flex-1 text-center font-display font-bold text-stone-900">{qty} in cart</span>
+                <button onClick={() => increment(item.id)}
+                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-orange-500 text-white font-bold hover:bg-orange-400 active:scale-90 transition-all"
+                >+</button>
+              </div>
+            </div>
+          )}
+
           <button onClick={onClose}
-            className="w-full py-3.5 bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-display font-bold rounded-2xl text-sm transition-colors shadow-md shadow-orange-200"
+            className="w-full mt-3 py-3 bg-stone-100 hover:bg-stone-200 text-stone-600 font-semibold rounded-2xl text-sm transition-colors"
           >
             Back to Menu
           </button>
-          <div className="h-safe-bottom" />
         </div>
       </div>
     </div>

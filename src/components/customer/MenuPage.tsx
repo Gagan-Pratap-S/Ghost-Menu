@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { MenuItem } from "@/data/menuData";
 import ItemCard from "./ItemCard";
 import CategoryFilter from "./CategoryFilter";
+import CartButton from "./CartButton";
 import { useMenuEngine, usePersonalizationTracker } from "@/hooks/useMenuEngine";
 
 interface Props {
@@ -11,6 +12,8 @@ interface Props {
   loading: boolean;
   kitchenStatus: "normal" | "busy";
   guestName: string;
+  memberCount: number;
+  restaurantName: string;
   onItemClick: (item: MenuItem) => void;
 }
 
@@ -49,9 +52,9 @@ function SkeletonList() {
   );
 }
 
-export default function MenuPage({ items, loading, kitchenStatus, guestName, onItemClick }: Props) {
-  const [searchTerm, setSearchTerm]       = useState("");
-  const [searchOpen, setSearchOpen]       = useState(false);
+export default function MenuPage({ items, loading, kitchenStatus, guestName, memberCount, restaurantName, onItemClick }: Props) {
+  const [searchTerm, setSearchTerm]         = useState("");
+  const [searchOpen, setSearchOpen]         = useState(false);
   const [activeCategory, setActiveCategory] = useState("All");
   const { trackView } = usePersonalizationTracker();
 
@@ -65,24 +68,26 @@ export default function MenuPage({ items, loading, kitchenStatus, guestName, onI
   }, [trackView, onItemClick]);
 
   const showSections = !searchTerm && activeCategory === "All";
+
   const hour = new Date().getHours();
+  const timeGreet = hour < 12 ? "☀️" : hour < 17 ? "👋" : "🌙";
   const greeting = guestName
-    ? `Hi, ${guestName} ${hour < 12 ? "☀️" : hour < 17 ? "👋" : "🌙"}`
-    : (hour < 12 ? "Good morning ☀️" : hour < 17 ? "Good afternoon 👋" : "Good evening 🌙");
+    ? `Hi ${guestName} ${timeGreet} · Table for ${memberCount}`
+    : `${hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"} ${timeGreet}`;
 
   return (
-    <div className="min-h-screen pb-10 bg-stone-50">
+    <div className="min-h-screen pb-28 bg-stone-50">
       {/* Sticky header */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-100 shadow-sm">
         <div className="max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <h1 className="font-display text-lg font-bold text-stone-900 tracking-tight truncate">Cafe Delight</h1>
+              <h1 className="font-display text-lg font-bold text-stone-900 tracking-tight truncate">{restaurantName}</h1>
               <p className="text-xs text-stone-400 mt-0.5 truncate">{greeting}</p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
-                onClick={() => { setSearchOpen(v => !v); }}
+                onClick={() => setSearchOpen(v => !v)}
                 className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${
                   searchOpen ? "bg-orange-100 text-orange-600" : "bg-stone-100 text-stone-500 hover:bg-stone-200"
                 }`}
@@ -157,9 +162,13 @@ export default function MenuPage({ items, loading, kitchenStatus, guestName, onI
             </section>
           )}
 
-          {/* Category filter — sticky below header */}
+          {/* Category filter */}
           <div className="sticky top-[56px] z-20 mt-5 bg-stone-50">
-            <CategoryFilter categories={categories} activeCategory={activeCategory} onCategoryChange={(c) => { setActiveCategory(c); setSearchTerm(""); setSearchOpen(false); }} />
+            <CategoryFilter
+              categories={categories}
+              activeCategory={activeCategory}
+              onCategoryChange={(c) => { setActiveCategory(c); setSearchTerm(""); setSearchOpen(false); }}
+            />
           </div>
 
           {/* Full menu */}
@@ -188,6 +197,9 @@ export default function MenuPage({ items, loading, kitchenStatus, guestName, onI
           </section>
         </div>
       )}
+
+      {/* Floating cart button — only renders when cart has items */}
+      <CartButton />
     </div>
   );
 }

@@ -2,13 +2,17 @@
 
 import { useState, useMemo } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { MenuItem } from "@/data/menuData";
+import { Restaurant } from "@/lib/supabase";
+import { useAuth } from "@/context/AuthContext";
 import { useRuleEngine } from "@/hooks/useRuleEngine";
 import ItemForm from "./ItemForm";
 
 interface Props {
   items: MenuItem[];
   loading: boolean;
+  restaurant: Restaurant | null;
   onAdd: (data: Omit<MenuItem, "id" | "clicks" | "views" | "tag">) => Promise<void>;
   onUpdate: (id: number, data: Partial<MenuItem>) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
@@ -26,34 +30,17 @@ function StatCard({ value, label, sub, color = "text-orange-500" }: { value: str
   );
 }
 
-function KitchenToggle({ status, onChange }: { status: "normal" | "busy"; onChange: (s: "normal" | "busy") => void }) {
-  const isNormal = status === "normal";
-  return (
-    <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm flex items-center justify-between">
-      <div>
-        <p className="font-display font-bold text-sm text-stone-900">Kitchen Mode</p>
-        <p className={`text-xs mt-0.5 ${isNormal ? "text-emerald-600" : "text-red-500"}`}>
-          {isNormal ? "✅ All orders accepted" : "🔴 Busy — fast items prioritised"}
-        </p>
-      </div>
-      <button
-        onClick={() => onChange(isNormal ? "busy" : "normal")}
-        className={`relative w-12 h-6 rounded-full transition-colors ${isNormal ? "bg-emerald-500" : "bg-red-400"}`}
-        aria-label="Toggle kitchen mode"
-      >
-        <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${isNormal ? "left-6" : "left-0.5"}`} />
-      </button>
-    </div>
-  );
-}
+export default function AdminDashboard({ items, loading, restaurant, onAdd, onUpdate, onDelete }: Props) {
+  const router = useRouter();
+  const { logout, session } = useAuth();
 
-export default function AdminDashboard({ items, loading, onAdd, onUpdate, onDelete }: Props) {
-  const [tab, setTab]               = useState<Tab>("overview");
-  const [searchTerm, setSearchTerm] = useState("");
+  const [tab, setTab]                     = useState<Tab>("overview");
+  const [searchTerm, setSearchTerm]       = useState("");
   const [kitchenStatus, setKitchenStatus] = useState<"normal" | "busy">("normal");
-  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingItem, setEditingItem]     = useState<MenuItem | null>(null);
+  const [showAddForm, setShowAddForm]     = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const { getQualityIndicators } = useRuleEngine();
   const indicators = useMemo(() => getQualityIndicators(items), [items, getQualityIndicators]);
@@ -64,7 +51,7 @@ export default function AdminDashboard({ items, loading, onAdd, onUpdate, onDele
   const available   = items.filter(i => i.available).length;
 
   const topPerformers  = [...items].sort((a, b) => b.clicks - a.clicks).slice(0, 5);
-  const needsAttention = items.filter(i => i.views > 100 && (i.clicks / i.views) < 0.15);
+  const needsAttention = items.filter(i => i.views > 100 && i.clicks / i.views < 0.15);
   const promoteItems   = items.filter(i => i.profit_tag === "high" && i.views < 50);
 
   const filteredItems = useMemo(() => {
@@ -87,9 +74,9 @@ export default function AdminDashboard({ items, loading, onAdd, onUpdate, onDele
     setShowAddForm(false);
   };
 
-  const confirmDelete = async (id: number) => {
-    await onDelete(id);
-    setDeleteConfirm(null);
+  const handleLogout = async () => {
+    await logout();
+    router.replace("/admin/login");
   };
 
   return (
@@ -99,22 +86,35 @@ export default function AdminDashboard({ items, loading, onAdd, onUpdate, onDele
         <div className="max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="font-display text-lg font-bold text-stone-900">Admin</h1>
-              <p className="text-xs text-stone-400">Cafe Delight</p>
+              <h1 className="font-display text-lg font-bold text-stone-900">
+                {restaurant?.name ?? "Admin"}
+              </h1>
+              <p className="text-xs text-stone-400">{session?.user.email}</p>
             </div>
-            <a href="/menu/cafe-delight" target="_blank"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 border border-orange-200 rounded-xl text-xs font-semibold text-orange-700 hover:bg-orange-100 transition-colors"
-            >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-              Preview Menu
-            </a>
+            <div className="flex items-center gap-2">
+              <a
+                href={`/menu/${restaurant?.slug ?? "cafe-delight"}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-xl text-xs font-semibold text-stone-600 transition-colors"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                Preview
+              </a>
+              <button
+                onClick={() => setShowLogoutConfirm(true)}
+                className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl text-xs font-semibold text-red-500 transition-colors"
+              >
+                Sign out
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}
           <div className="flex gap-1 mt-3 bg-stone-100 rounded-xl p-1">
-            {(["overview", "items"] as Tab[]).map((t) => (
+            {(["overview", "items"] as Tab[]).map(t => (
               <button key={t} onClick={() => setTab(t)}
                 className={`flex-1 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all ${
                   tab === t ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-700"
@@ -134,7 +134,21 @@ export default function AdminDashboard({ items, loading, onAdd, onUpdate, onDele
           </div>
         ) : tab === "overview" ? (
           <div className="space-y-4 animate-fadeIn">
-            <KitchenToggle status={kitchenStatus} onChange={setKitchenStatus} />
+            {/* Kitchen mode */}
+            <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm flex items-center justify-between">
+              <div>
+                <p className="font-display font-bold text-sm text-stone-900">Kitchen Mode</p>
+                <p className={`text-xs mt-0.5 ${kitchenStatus === "normal" ? "text-emerald-600" : "text-red-500"}`}>
+                  {kitchenStatus === "normal" ? "✅ All orders accepted" : "🔴 Busy — fast items prioritised"}
+                </p>
+              </div>
+              <button
+                onClick={() => setKitchenStatus(s => s === "normal" ? "busy" : "normal")}
+                className={`relative w-12 h-6 rounded-full transition-colors ${kitchenStatus === "normal" ? "bg-emerald-500" : "bg-red-400"}`}
+              >
+                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${kitchenStatus === "normal" ? "left-6" : "left-0.5"}`} />
+              </button>
+            </div>
 
             {/* Stats */}
             <div className="grid grid-cols-2 gap-3">
@@ -150,7 +164,7 @@ export default function AdminDashboard({ items, loading, onAdd, onUpdate, onDele
               <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden divide-y divide-stone-50">
                 {topPerformers.map((item, idx) => (
                   <div key={item.id} className="flex items-center gap-3 px-4 py-2.5">
-                    <span className="text-xs font-bold text-stone-300 w-4 flex-shrink-0">#{idx+1}</span>
+                    <span className="text-xs font-bold text-stone-300 w-4 flex-shrink-0">#{idx + 1}</span>
                     <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-stone-100 flex-shrink-0">
                       <Image src={item.image} alt={item.name} fill sizes="32px" className="object-cover"
                         onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
@@ -168,7 +182,6 @@ export default function AdminDashboard({ items, loading, onAdd, onUpdate, onDele
               </div>
             </div>
 
-            {/* Needs Attention */}
             {needsAttention.length > 0 && (
               <div>
                 <h2 className="font-display text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">⚠️ Needs Attention</h2>
@@ -184,7 +197,6 @@ export default function AdminDashboard({ items, loading, onAdd, onUpdate, onDele
               </div>
             )}
 
-            {/* Promote */}
             {promoteItems.length > 0 && (
               <div>
                 <h2 className="font-display text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">📈 Promote These</h2>
@@ -203,7 +215,6 @@ export default function AdminDashboard({ items, loading, onAdd, onUpdate, onDele
         ) : (
           /* ─── Items Tab ─── */
           <div className="space-y-3 animate-fadeIn">
-            {/* Search + Add */}
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <input
@@ -222,29 +233,22 @@ export default function AdminDashboard({ items, loading, onAdd, onUpdate, onDele
               </div>
               <button
                 onClick={() => { setShowAddForm(true); setEditingItem(null); }}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white text-xs font-bold rounded-xl transition-colors shadow-sm shadow-orange-200 whitespace-nowrap"
+                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white text-xs font-bold rounded-xl transition-colors shadow-sm whitespace-nowrap"
               >
                 <span className="text-sm leading-none">+</span> Add Dish
               </button>
             </div>
 
             {searchTerm && (
-              <p className="text-xs text-stone-400">{filteredItems.length} result{filteredItems.length !== 1 ? "s" : ""} for "{searchTerm}"</p>
+              <p className="text-xs text-stone-400">{filteredItems.length} result{filteredItems.length !== 1 ? "s" : ""}</p>
             )}
 
-            {/* Add Form */}
             {showAddForm && (
-              <ItemForm
-                mode="add"
-                onSave={handleAdd}
-                onCancel={() => setShowAddForm(false)}
-              />
+              <ItemForm mode="add" onSave={handleAdd} onCancel={() => setShowAddForm(false)} />
             )}
 
-            {/* Item list */}
-            {filteredItems.map((item) => (
+            {filteredItems.map(item => (
               <div key={item.id}>
-                {/* Edit form inline */}
                 {editingItem?.id === item.id ? (
                   <ItemForm
                     mode="edit"
@@ -263,17 +267,16 @@ export default function AdminDashboard({ items, loading, onAdd, onUpdate, onDele
                   />
                 )}
 
-                {/* Delete confirmation */}
                 {deleteConfirm === item.id && (
                   <div className="mt-2 bg-red-50 border border-red-200 rounded-2xl p-4 animate-slideUp">
                     <p className="text-sm font-semibold text-red-800 mb-1">Delete "{item.name}"?</p>
-                    <p className="text-xs text-red-600 mb-3">This cannot be undone.</p>
+                    <p className="text-xs text-red-500 mb-3">This cannot be undone.</p>
                     <div className="flex gap-2">
                       <button onClick={() => setDeleteConfirm(null)}
                         className="flex-1 py-2 bg-white border border-stone-200 rounded-xl text-xs font-semibold text-stone-600 hover:bg-stone-50">
                         Cancel
                       </button>
-                      <button onClick={() => confirmDelete(item.id)}
+                      <button onClick={async () => { await onDelete(item.id); setDeleteConfirm(null); }}
                         className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-bold transition-colors">
                         Delete
                       </button>
@@ -292,11 +295,31 @@ export default function AdminDashboard({ items, loading, onAdd, onUpdate, onDele
           </div>
         )}
       </div>
+
+      {/* Logout confirm */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-5">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowLogoutConfirm(false)} />
+          <div className="relative bg-white rounded-3xl p-6 w-full max-w-xs shadow-2xl animate-slideUp">
+            <p className="font-display font-bold text-stone-900 mb-1">Sign out?</p>
+            <p className="text-xs text-stone-500 mb-4">You'll need to sign in again to access the admin panel.</p>
+            <div className="flex gap-2">
+              <button onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-xs font-semibold transition-colors">
+                Cancel
+              </button>
+              <button onClick={handleLogout}
+                className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-bold transition-colors">
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Admin Item Row ────────────────────────────────────────────────────────────
 function AdminItemRow({
   item, indicator, onEdit, onToggleAvailable, onToggleFeatured, onDelete
 }: {
@@ -308,9 +331,7 @@ function AdminItemRow({
   onDelete: () => void;
 }) {
   return (
-    <div className={`bg-white rounded-2xl border shadow-sm p-3 transition-opacity ${
-      !item.available ? "border-stone-100 opacity-60" : "border-stone-100"
-    }`}>
+    <div className={`bg-white rounded-2xl border shadow-sm p-3 transition-opacity ${!item.available ? "opacity-50" : ""} border-stone-100`}>
       <div className="flex gap-3 mb-2.5">
         <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-stone-100 flex-shrink-0">
           <Image src={item.image} alt={item.name} fill sizes="48px" className="object-cover"
@@ -322,31 +343,30 @@ function AdminItemRow({
           <p className="text-xs text-stone-400">{item.views}v · {item.clicks}c</p>
         </div>
         {indicator && (
-          <span className="text-[10px] font-semibold text-stone-500 bg-stone-50 border border-stone-100 rounded-lg px-2 py-1 self-start whitespace-nowrap max-w-[80px] text-right leading-tight">
+          <span className="text-[10px] font-semibold text-stone-500 bg-stone-50 border border-stone-100 rounded-lg px-1.5 py-1 self-start text-right leading-tight max-w-[72px]">
             {indicator.label}
           </span>
         )}
       </div>
-
       <div className="grid grid-cols-4 gap-1.5">
         <button onClick={onEdit}
-          className="col-span-1 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-xs font-semibold transition-colors text-center">
+          className="py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-xs font-semibold transition-colors">
           ✏️ Edit
         </button>
         <button onClick={onToggleAvailable}
-          className={`col-span-1 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+          className={`py-1.5 rounded-xl text-xs font-semibold transition-colors ${
             item.available ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-red-100 text-red-600 hover:bg-red-200"
           }`}>
           {item.available ? "✓ Avail" : "✗ Sold"}
         </button>
         <button onClick={onToggleFeatured}
-          className={`col-span-1 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+          className={`py-1.5 rounded-xl text-xs font-semibold transition-colors ${
             item.featured ? "bg-amber-100 text-amber-700 hover:bg-amber-200" : "bg-stone-100 text-stone-500 hover:bg-stone-200"
           }`}>
           {item.featured ? "⭐ Feat" : "Feature"}
         </button>
         <button onClick={onDelete}
-          className="col-span-1 py-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl text-xs font-semibold transition-colors">
+          className="py-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl text-xs font-semibold transition-colors">
           🗑
         </button>
       </div>

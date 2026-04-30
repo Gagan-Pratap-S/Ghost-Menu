@@ -1,136 +1,167 @@
-// Supabase client — thin REST wrapper, no npm package needed
-// Gracefully falls back to local data if env vars not set
+// ─── Supabase client — thin REST wrapper ────────────────────────────────────
+// Uses anon key for public reads; uses session token for authed admin writes.
+// Falls back gracefully if env vars not configured.
 
 const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL  ?? "";
 const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 export const isSupabaseConfigured = !!(SUPABASE_URL && SUPABASE_ANON);
 
-// Debug helper to check Supabase configuration status
-export function getSupabaseStatus() {
-  return {
-    configured: isSupabaseConfigured,
-    url: SUPABASE_URL ? "✓" : "✗",
-    key: SUPABASE_ANON ? "✓" : "✗",
-    message: isSupabaseConfigured 
-      ? "Supabase is configured" 
-      : "Supabase is NOT configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env.local",
-  };
-}
+// ─── Auth token storage (set after login) ────────────────────────────────────
+let _authToken: string | null = null;
+export function setAuthToken(token: string | null) { _authToken = token; }
+export function getAuthToken() { return _authToken; }
 
-// ─── Shared headers ───────────────────────────────────────────────────────────
+// ─── Headers ─────────────────────────────────────────────────────────────────
 function headers(extra: Record<string, string> = {}): Record<string, string> {
+  const token = _authToken ?? SUPABASE_ANON;
   return {
     apikey: SUPABASE_ANON,
-    Authorization: `Bearer ${SUPABASE_ANON}`,
+    Authorization: `Bearer ${token}`,
     "Content-Type": "application/json",
     Prefer: "return=representation",
     ...extra,
   };
 }
 
-// ─── READ ─────────────────────────────────────────────────────────────────────
-export async function fetchMenuItems() {
-  if (!isSupabaseConfigured) {
-    console.warn("⚠️ Supabase not configured. Using local fallback data.");
-    return null;
-  }
-  try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/menu_items?order=id.asc`, { headers: headers() });
-    if (!res.ok) {
-      const error = await res.text();
-      console.error("❌ Failed to fetch menu items:", res.status, error);
-      return null;
-    }
-    const data = await res.json();
-    console.log("✅ Menu items fetched successfully:", data.length, "items");
-    return data;
-  } catch (err) {
-    console.error("❌ Error fetching menu items:", err);
-    return null;
-  }
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+export interface AuthSession {
+  access_token: string;
+  user: { id: string; email: string };
 }
 
-// ─── CREATE ───────────────────────────────────────────────────────────────────
-export async function createMenuItem(data: Omit<import("@/data/menuData").MenuItem, "id" | "clicks" | "views" | "tag">) {
-  if (!isSupabaseConfigured) {
-    console.warn("⚠️ Supabase not configured. Menu items will only be saved locally.");
-    return null;
-  }
+export async function signIn(email: string, password: string): Promise<{ session: AuthSession | null; error: string | null }> {
+  if (!isSupabaseConfigured) return { session: null, error: "Supabase not configured" };
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_ANON, "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { session: null, error: data.error_description ?? data.msg ?? "Login failed" };
+    const session: AuthSession = { access_token: data.access_token, user: data.user };
+    setAuthToken(session.access_token);
+    return { session, error: null };
+  } catch { return { session: null, error: "Network error" }; }
+}
+
+export async function signOut() {
+  if (!isSupabaseConfigured) return;
+  try {
+    await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+      method: "POST",
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${_authToken}` },
+    });
+  } catch {}
+  setAuthToken(null);
+}
+
+export async function getUser(): Promise<AuthSession["user"] | null> {
+  if (!isSupabaseConfigured || !_authToken) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${_authToken}` },
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
+
+// ─── RESTAURANT ───────────────────────────────────────────────────────────────
+export interface Restaurant {
+  id: string;
+  name: string;
+  slug: string;
+  owner_id: string;
+}
+
+export async function fetchRestaurantBySlug(slug: string): Promise<Restaurant | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/restaurants?slug=eq.${encodeURIComponent(slug)}&limit=1`,
+      { headers: headers() }
+    );
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return rows[0] ?? null;
+  } catch { return null; }
+}
+
+export async function fetchRestaurantByOwner(ownerId: string): Promise<Restaurant | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/restaurants?owner_id=eq.${encodeURIComponent(ownerId)}&limit=1`,
+      { headers: headers() }
+    );
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return rows[0] ?? null;
+  } catch { return null; }
+}
+
+// ─── MENU ITEMS ───────────────────────────────────────────────────────────────
+export async function fetchMenuItems(restaurantId?: string) {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const filter = restaurantId ? `&restaurant_id=eq.${encodeURIComponent(restaurantId)}` : "";
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/menu_items?order=id.asc${filter}`,
+      { headers: headers() }
+    );
+    if (!res.ok) return null;
+    return res.json();
+  } catch { return null; }
+}
+
+export async function createMenuItem(
+  data: Omit<import("@/data/menuData").MenuItem, "id" | "clicks" | "views" | "tag">,
+  restaurantId: string
+) {
+  if (!isSupabaseConfigured) return null;
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/menu_items`, {
       method: "POST",
       headers: headers(),
-      body: JSON.stringify({ ...data, clicks: 0, views: 0 }),
+      body: JSON.stringify({ ...data, clicks: 0, views: 0, restaurant_id: restaurantId }),
     });
-    if (!res.ok) {
-      const error = await res.text();
-      console.error("❌ Failed to create menu item:", res.status, error);
-      return null;
-    }
+    if (!res.ok) return null;
     const rows = await res.json();
-    console.log("✅ Menu item created successfully:", rows);
     return Array.isArray(rows) ? rows[0] : rows;
-  } catch (err) {
-    console.error("❌ Error creating menu item:", err);
-    return null;
-  }
+  } catch { return null; }
 }
 
-// ─── UPDATE ───────────────────────────────────────────────────────────────────
 export async function updateMenuItem(
   id: number,
   data: Partial<Omit<import("@/data/menuData").MenuItem, "id" | "clicks" | "views" | "tag">>
 ) {
-  if (!isSupabaseConfigured) {
-    console.warn("⚠️ Supabase not configured. Menu items will only be saved locally.");
-    return null;
-  }
+  if (!isSupabaseConfigured) return null;
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/menu_items?id=eq.${id}`, {
       method: "PATCH",
       headers: headers(),
       body: JSON.stringify(data),
     });
-    if (!res.ok) {
-      const error = await res.text();
-      console.error("❌ Failed to update menu item:", res.status, error);
-      return null;
-    }
+    if (!res.ok) return null;
     const rows = await res.json();
-    console.log("✅ Menu item updated successfully:", rows);
     return Array.isArray(rows) ? rows[0] : rows;
-  } catch (err) {
-    console.error("❌ Error updating menu item:", err);
-    return null;
-  }
+  } catch { return null; }
 }
 
-// ─── DELETE ───────────────────────────────────────────────────────────────────
 export async function deleteMenuItem(id: number) {
-  if (!isSupabaseConfigured) {
-    console.warn("⚠️ Supabase not configured. Menu items will only be deleted locally.");
-    return false;
-  }
+  if (!isSupabaseConfigured) return false;
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/menu_items?id=eq.${id}`, {
       method: "DELETE",
       headers: headers(),
     });
-    if (!res.ok) {
-      const error = await res.text();
-      console.error("❌ Failed to delete menu item:", res.status, error);
-      return false;
-    }
-    console.log("✅ Menu item deleted successfully");
-    return true;
-  } catch (err) {
-    console.error("❌ Error deleting menu item:", err);
-    return false;
-  }
+    return res.ok;
+  } catch { return false; }
 }
 
-// ─── TRACKING (existing, unchanged) ──────────────────────────────────────────
+// ─── TRACKING ─────────────────────────────────────────────────────────────────
 async function rpc(fn: string, body: object) {
   if (!isSupabaseConfigured) return;
   try {
