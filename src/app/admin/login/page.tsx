@@ -17,11 +17,12 @@ function LoginForm() {
 
   // Already logged in → forward to ?next or /admin
   useEffect(() => {
-    if (!loading && session) {
-      const next = searchParams.get("next") ?? "/admin";
-      router.replace(next);
-    }
-  }, [session, loading, router, searchParams]);
+  if (!loading && session) {
+    const next = searchParams.get("next") ?? "/admin";
+    setBusy(false); // ✅ ensure UI resets
+    router.replace(next);
+  }
+}, [session, loading, router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,10 +33,7 @@ function LoginForm() {
     if (err) {
       setError(err);
       setBusy(false);
-    } else {
-      const next = searchParams.get("next") ?? "/admin";
-      router.replace(next);
-    }
+    } 
   };
 
   if (loading) return null;

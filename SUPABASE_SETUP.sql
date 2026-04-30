@@ -101,7 +101,7 @@ INSERT INTO restaurants (id, name, slug, owner_id) VALUES (
   'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   'Cafe Delight',
   'cafe-delight',
-  'b75c4a97-c540-49c2-9118-c923b2b1c08b'   -- ← Replace this with your auth.users UUID
+  '5e54e38b-fc4a-4555-8d12-c5e3a2fd6e77'   -- ← Replace this with your auth.users UUID
 ) ON CONFLICT (slug) DO NOTHING;
 
 -- Step B: Insert menu items (uses the restaurant id above)
