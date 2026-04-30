@@ -69,23 +69,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<string | null> => {
-    const { session: s, error } = await signIn(email, password);
-    if (error || !s) return error ?? "Login failed";
+  const { session: s, error } = await signIn(email, password);
 
-    const rest = await fetchRestaurantByOwner(s.user.id);
+  // 🔥 ADD THESE LOGS
+  console.log("LOGIN SESSION:", s);
+  console.log("LOGIN ERROR:", error);
 
-    setSession(s);
-    setRestaurant(rest);
+  if (error || !s) return error ?? "Login failed";
 
-    try {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(s));
-      if (rest) localStorage.setItem(RESTAURANT_KEY, JSON.stringify(rest));
-      // Set lightweight cookie so middleware can protect /admin without the JWT
-      document.cookie = "ghost_admin_auth=1; path=/; max-age=86400; SameSite=Strict";
-    } catch {}
+  const rest = await fetchRestaurantByOwner(s.user.id);
 
-    return null; // null = success
-  }, []);
+  console.log("RESTAURANT FETCHED:", rest);
+
+  setSession(s);
+  setRestaurant(rest);
+
+  try {
+    localStorage.setItem("ghostMenuSession", JSON.stringify(s));
+    if (rest) localStorage.setItem("ghostMenuRestaurant", JSON.stringify(rest));
+  } catch {}
+
+  return null;
+}, []);
 
   const logout = useCallback(async () => {
     await signOut();
