@@ -36,7 +36,14 @@ function LoginForm() {
     } 
   };
 
-  if (loading) return null;
+if (loading) {
+  return null; // or loader
+}
+
+if (!session) {
+  router.replace("/admin/login");
+  return null;
+}
 
   return (
     <div className="min-h-screen bg-stone-900 flex items-center justify-center px-5">
