@@ -24,17 +24,27 @@ function LoginForm() {
   }
 }, [session, loading, router, searchParams]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim() || !password) return;
-    setBusy(true);
-    setError("");
-    const err = await login(email.trim(), password);
-    if (err) {
-      setError(err);
-      setBusy(false);
-    } 
-  };
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  if (!email.trim() || !password) return;
+
+  setBusy(true);
+  setError("");
+
+  const err = await login(email.trim(), password);
+
+  if (err) {
+    setError(err);
+    setBusy(false);
+  } else {
+    // ✅ SET COOKIE FOR MIDDLEWARE
+    document.cookie = "ghost_admin_auth=1; path=/";
+
+    const next = searchParams.get("next") ?? "/admin";
+    router.replace(next);
+  }
+};
 
 if (loading) {
   return null; // or loader
