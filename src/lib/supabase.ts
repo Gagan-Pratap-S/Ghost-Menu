@@ -76,43 +76,34 @@ export interface AuthSession {
   user: { id: string; email: string };
 }
 
-export async function signIn(
-  email: string,
-  password: string
-): Promise<{ session: AuthSession | null; error: string | null }> {
-  if (!isSupabaseConfigured) return { session: null, error: "Supabase not configured" };
-  try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      method: "POST",
-      headers: { apikey: SUPABASE_ANON, "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) return { session: null, error: data.error_description ?? data.msg ?? "Login failed" };
-    const session: AuthSession = {
-      access_token:  data.access_token,
-      refresh_token: data.refresh_token,
-      expires_in:    data.expires_in ?? 3600,
-      user:          data.user,
-    };
-    AuthStore.set(session.access_token, session.refresh_token, session.expires_in);
-    return { session, error: null };
-  } catch { return { session: null, error: "Network error — check connection" }; }
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+export async function signIn(email: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  console.log("AUTH DATA:", data);
+  console.log("AUTH ERROR:", error);
+
+  if (error) {
+    return { session: null, error: error.message };
+  }
+
+  return { session: data.session, error: null };
 }
 
 export async function signOut() {
-  if (!isSupabaseConfigured) return;
-  const token = AuthStore.get();
-  try {
-    if (token) {
-      await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
-        method: "POST",
-        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${token}` },
-      });
-    }
-  } catch {}
-  AuthStore.clear();
+  await supabase.auth.signOut();
 }
+
+
 
 // Validate a stored session token is still live (call on app mount)
 export async function validateSession(token: string): Promise<boolean> {
