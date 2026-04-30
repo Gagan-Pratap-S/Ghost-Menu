@@ -8,6 +8,7 @@ import { Restaurant } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import { useRuleEngine } from "@/hooks/useRuleEngine";
 import ItemForm from "./ItemForm";
+import OrdersTab from "./OrdersTab";
 
 interface Props {
   items: MenuItem[];
@@ -18,7 +19,7 @@ interface Props {
   onDelete: (id: number) => Promise<void>;
 }
 
-type Tab = "overview" | "items";
+type Tab = "overview" | "items" | "orders";
 
 function StatCard({ value, label, sub, color = "text-orange-500" }: { value: string; label: string; sub?: string; color?: string }) {
   return (
@@ -45,14 +46,14 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
   const { getQualityIndicators } = useRuleEngine();
   const indicators = useMemo(() => getQualityIndicators(items), [items, getQualityIndicators]);
 
-  const totalViews  = items.reduce((s, i) => s + i.views, 0);
-  const totalClicks = items.reduce((s, i) => s + i.clicks, 0);
-  const avgCTR      = totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(1) : "0";
-  const available   = items.filter(i => i.available).length;
+  const totalViews  = useMemo(() => items.reduce((s, i) => s + i.views, 0), [items]);
+  const totalClicks = useMemo(() => items.reduce((s, i) => s + i.clicks, 0), [items]);
+  const avgCTR      = useMemo(() => totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(1) : "0", [totalViews, totalClicks]);
+  const available   = useMemo(() => items.filter(i => i.available).length, [items]);
 
-  const topPerformers  = [...items].sort((a, b) => b.clicks - a.clicks).slice(0, 5);
-  const needsAttention = items.filter(i => i.views > 100 && i.clicks / i.views < 0.15);
-  const promoteItems   = items.filter(i => i.profit_tag === "high" && i.views < 50);
+  const topPerformers  = useMemo(() => [...items].sort((a, b) => b.clicks - a.clicks).slice(0, 5), [items]);
+  const needsAttention = useMemo(() => items.filter(i => i.views > 100 && i.clicks / i.views < 0.15), [items]);
+  const promoteItems   = useMemo(() => items.filter(i => i.profit_tag === "high" && i.views < 50), [items]);
 
   const filteredItems = useMemo(() => {
     if (!searchTerm.trim()) return items;
@@ -114,13 +115,13 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
 
           {/* Tabs */}
           <div className="flex gap-1 mt-3 bg-stone-100 rounded-xl p-1">
-            {(["overview", "items"] as Tab[]).map(t => (
+            {(["overview", "items", "orders"] as Tab[]).map(t => (
               <button key={t} onClick={() => setTab(t)}
                 className={`flex-1 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all ${
                   tab === t ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-700"
                 }`}
               >
-                {t === "overview" ? "📊 Overview" : `🍽️ Menu (${items.length})`}
+                {t === "overview" ? "📊 Overview" : t === "items" ? `🍽️ Menu (${items.length})` : "📋 Orders"}
               </button>
             ))}
           </div>
@@ -212,7 +213,7 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
               </div>
             )}
           </div>
-        ) : (
+        ) : tab === "items" ? (
           /* ─── Items Tab ─── */
           <div className="space-y-3 animate-fadeIn">
             <div className="flex gap-2">
@@ -293,6 +294,16 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
               </div>
             )}
           </div>
+        ) : (
+          /* ─── Orders Tab ─── */
+          restaurant?.id ? (
+            <OrdersTab restaurantId={restaurant.id} />
+          ) : (
+            <div className="text-center py-16">
+              <p className="text-3xl mb-2">📋</p>
+              <p className="font-display font-semibold text-stone-600">Connect Supabase to view orders</p>
+            </div>
+          )
         )}
       </div>
 

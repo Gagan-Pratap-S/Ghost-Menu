@@ -1,7 +1,14 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
-import { AuthSession, Restaurant, signIn, signOut, fetchRestaurantByOwner, setAuthToken } from "@/lib/supabase";
+import {
+  AuthSession, Restaurant,
+  signIn, signOut,
+  fetchRestaurantByOwner,
+  setAuthToken,
+  validateSession,
+  refreshSession,
+} from "@/lib/supabase";
 
 interface AuthContextValue {
   session: AuthSession | null;
@@ -21,33 +28,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [loading, setLoading]       = useState(true);
 
-  // Restore session from localStorage on mount
+  // Restore + validate session on mount
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(SESSION_KEY);
-      const rest = localStorage.getItem(RESTAURANT_KEY);
-      if (raw) {
-        const s = JSON.parse(raw) as AuthSession;
-        setAuthToken(s.access_token);
-        setSession(s);
+    (async () => {
+      try {
+        const rawSession    = localStorage.getItem(SESSION_KEY);
+        const rawRestaurant = localStorage.getItem(RESTAURANT_KEY);
+
+        if (rawSession) {
+          const stored = JSON.parse(rawSession) as AuthSession;
+
+          // Re-hydrate AuthStore with token + refresh token
+          setAuthToken(stored.access_token, stored.refresh_token, stored.expires_in ?? 3600);
+
+          // Validate token is still alive — if expired, try refresh first
+          let valid = await validateSession(stored.access_token);
+          if (!valid) {
+            valid = await refreshSession();
+          }
+
+          if (valid) {
+            setSession(stored);
+            if (rawRestaurant) setRestaurant(JSON.parse(rawRestaurant));
+          } else {
+            // Token dead and can't refresh — clear everything
+            localStorage.removeItem(SESSION_KEY);
+            localStorage.removeItem(RESTAURANT_KEY);
+          }
+        }
+      } catch {
+        // Corrupt storage — clear it
+        try {
+          localStorage.removeItem(SESSION_KEY);
+          localStorage.removeItem(RESTAURANT_KEY);
+        } catch {}
+      } finally {
+        setLoading(false);
       }
-      if (rest) setRestaurant(JSON.parse(rest));
-    } catch {}
-    setLoading(false);
+    })();
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<string | null> => {
     const { session: s, error } = await signIn(email, password);
     if (error || !s) return error ?? "Login failed";
 
-    // Fetch the restaurant owned by this user
     const rest = await fetchRestaurantByOwner(s.user.id);
 
     setSession(s);
     setRestaurant(rest);
+
     try {
       localStorage.setItem(SESSION_KEY, JSON.stringify(s));
       if (rest) localStorage.setItem(RESTAURANT_KEY, JSON.stringify(rest));
+      // Set lightweight cookie so middleware can protect /admin without the JWT
+      document.cookie = "ghost_admin_auth=1; path=/; max-age=86400; SameSite=Strict";
     } catch {}
 
     return null; // null = success
@@ -60,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       localStorage.removeItem(SESSION_KEY);
       localStorage.removeItem(RESTAURANT_KEY);
+      document.cookie = "ghost_admin_auth=; path=/; max-age=0; SameSite=Strict";
     } catch {}
   }, []);
 

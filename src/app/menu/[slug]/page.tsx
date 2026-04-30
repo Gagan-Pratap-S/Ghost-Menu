@@ -50,8 +50,8 @@ export default function CustomerMenuPage() {
   const handleItemClick = useCallback((item: MenuItem) => {
     const updated: MenuItem = { ...item, clicks: item.clicks + 1, views: item.views + 1 };
     setItems(prev => prev.map(i => i.id === item.id ? updated : i));
-    incrementClick(item.id);
-    incrementView(item.id);
+    incrementClick(item.id, restaurant?.id);
+    incrementView(item.id, restaurant?.id);
     setSelectedItem(updated);
   }, []);
 
@@ -71,6 +71,7 @@ export default function CustomerMenuPage() {
         guestName={guestName}
         memberCount={memberCount}
         restaurantName={restaurant?.name ?? "Cafe Delight"}
+        restaurantId={restaurant?.id}
         onItemClick={handleItemClick}
       />
       <ItemModal

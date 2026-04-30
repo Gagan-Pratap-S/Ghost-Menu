@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Image from "next/image";
 import { MenuItem, comboSuggestions, initialMenuItems } from "@/data/menuData";
-import { useCart } from "@/context/CartContext";
+import { useCart, lockScroll, unlockScroll } from "@/context/CartContext";
 
 interface Props {
   item: MenuItem | null;
@@ -14,9 +14,9 @@ interface Props {
 export default function ItemModal({ item, onClose, onComboItemClick }: Props) {
   const { items: cartItems, add, increment, decrement } = useCart();
 
+  // Shared ref-counted scroll lock — safe alongside CartModal
   useEffect(() => {
-    document.body.style.overflow = item ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
+    if (item) { lockScroll(); return unlockScroll; }
   }, [item]);
 
   if (!item) return null;

@@ -101,7 +101,7 @@ INSERT INTO restaurants (id, name, slug, owner_id) VALUES (
   'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
   'Cafe Delight',
   'cafe-delight',
-  '<YOUR_USER_ID>'   -- ← Replace this with your auth.users UUID
+  'b75c4a97-c540-49c2-9118-c923b2b1c08b'   -- ← Replace this with your auth.users UUID
 ) ON CONFLICT (slug) DO NOTHING;
 
 -- Step B: Insert menu items (uses the restaurant id above)
@@ -129,3 +129,93 @@ FROM (VALUES
   ('Mango Lassi',79,'Beverages','https://images.unsplash.com/photo-1590080876614-bc8104e62908?w=400&h=300&fit=crop','Thick yogurt drink blended with Alphonso mango pulp. Summer favourite.',true,false,'fast','medium',45,189),
   ('Masala Chai',39,'Beverages','https://images.unsplash.com/photo-1567922045116-2a00fae2ed03?w=400&h=300&fit=crop','Spiced tea brewed with ginger, cardamom and cinnamon. The classic.',true,false,'fast','medium',189,467)
 ) AS v(name,price,category,image,description,available,featured,prep_time,profit_tag,clicks,views);
+
+-- ──────────────────────────────────────────────────────────────
+-- 6. ORDERS TABLE
+-- ──────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS orders (
+  id            UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  restaurant_id UUID NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+  guest_name    TEXT NOT NULL DEFAULT 'Guest',
+  member_count  INTEGER NOT NULL DEFAULT 1,
+  table_number  TEXT NOT NULL DEFAULT 'QR',
+  items         JSONB NOT NULL DEFAULT '[]',
+  total         INTEGER NOT NULL DEFAULT 0,
+  status        TEXT NOT NULL DEFAULT 'pending'
+                  CHECK (status IN ('pending','preparing','done','cancelled')),
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+
+-- Customers (anon) can INSERT orders for any restaurant
+CREATE POLICY "Anon insert orders"
+  ON orders FOR INSERT WITH CHECK (true);
+
+-- Only the restaurant owner can read and update orders
+CREATE POLICY "Owner read orders"
+  ON orders FOR SELECT USING (
+    auth.uid() = (SELECT owner_id FROM restaurants WHERE id = restaurant_id)
+  );
+
+CREATE POLICY "Owner update orders"
+  ON orders FOR UPDATE USING (
+    auth.uid() = (SELECT owner_id FROM restaurants WHERE id = restaurant_id)
+  );
+
+-- ──────────────────────────────────────────────────────────────
+-- 7. FIX: Tracking RPCs — add restaurant_id guard to prevent
+--    cross-tenant manipulation of click/view counts
+-- ──────────────────────────────────────────────────────────────
+-- Drop old unguarded versions first
+DROP FUNCTION IF EXISTS increment_click(INT);
+DROP FUNCTION IF EXISTS increment_view(INT);
+
+-- New versions require item_id + restaurant_id — anon can only update
+-- items that actually belong to the restaurant they're viewing
+CREATE OR REPLACE FUNCTION increment_click(item_id INT, rest_id UUID)
+RETURNS VOID AS $$
+  UPDATE menu_items
+  SET clicks = clicks + 1
+  WHERE id = item_id AND restaurant_id = rest_id;
+$$ LANGUAGE sql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION increment_view(item_id INT, rest_id UUID)
+RETURNS VOID AS $$
+  UPDATE menu_items
+  SET views = views + 1
+  WHERE id = item_id AND restaurant_id = rest_id;
+$$ LANGUAGE sql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION increment_click(INT, UUID) TO anon;
+GRANT EXECUTE ON FUNCTION increment_view(INT, UUID)  TO anon;
+
+-- ──────────────────────────────────────────────────────────────
+-- 8. FIX: menu_items RLS — use security-definer helper function
+--    instead of subquery (avoids N+1 RLS evaluation)
+-- ──────────────────────────────────────────────────────────────
+-- Helper: returns the owner_id for a given restaurant_id
+CREATE OR REPLACE FUNCTION get_restaurant_owner(rest_id UUID)
+RETURNS UUID AS $$
+  SELECT owner_id FROM restaurants WHERE id = rest_id;
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
+
+-- Drop old subquery-based policies and replace with function-based ones
+DROP POLICY IF EXISTS "Owner insert menu_items" ON menu_items;
+DROP POLICY IF EXISTS "Owner update menu_items" ON menu_items;
+DROP POLICY IF EXISTS "Owner delete menu_items" ON menu_items;
+
+CREATE POLICY "Owner insert menu_items"
+  ON menu_items FOR INSERT WITH CHECK (
+    auth.uid() = get_restaurant_owner(restaurant_id)
+  );
+
+CREATE POLICY "Owner update menu_items"
+  ON menu_items FOR UPDATE USING (
+    auth.uid() = get_restaurant_owner(restaurant_id)
+  );
+
+CREATE POLICY "Owner delete menu_items"
+  ON menu_items FOR DELETE USING (
+    auth.uid() = get_restaurant_owner(restaurant_id)
+  );

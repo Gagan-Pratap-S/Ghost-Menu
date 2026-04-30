@@ -9,6 +9,15 @@ interface MenuOutput {
   categories: string[];
 }
 
+// Read localStorage synchronously so the first sort uses real data, no flicker
+function getViewedItemIds(): number[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = localStorage.getItem("ghostMenuViewedItems");
+    return stored ? JSON.parse(stored) : [];
+  } catch { return []; }
+}
+
 export function useMenuEngine(
   items: MenuItem[],
   kitchenStatus: "normal" | "busy",
@@ -17,22 +26,26 @@ export function useMenuEngine(
 ): MenuOutput {
   const { sortByRules, getCustomerTag } = useRuleEngine();
 
-  const [viewedItemIds, setViewedItemIds] = useState<number[]>([]);
+  // Initialise from localStorage immediately — no async gap, no flicker
+  const [viewedItemIds, setViewedItemIds] = useState<number[]>(() => getViewedItemIds());
+
+  // Keep in sync if another tab updates it
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("ghostMenuViewedItems");
-      if (stored) setViewedItemIds(JSON.parse(stored));
-    } catch {}
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "ghostMenuViewedItems") setViewedItemIds(getViewedItemIds());
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const availableItems = useMemo(() => {
-    return items
-      .filter((item) => item.available)
-      .map((item) => ({ ...item, tag: getCustomerTag(item) ?? undefined }));
-  }, [items, getCustomerTag]);
+  const availableItems = useMemo(() =>
+    items
+      .filter(item => item.available)
+      .map(item => ({ ...item, tag: getCustomerTag(item) ?? undefined }))
+  , [items, getCustomerTag]);
 
   const categories = useMemo(() => {
-    const cats = [...new Set(availableItems.map((i) => i.category))];
+    const cats = [...new Set(availableItems.map(i => i.category))];
     return ["All", ...cats];
   }, [availableItems]);
 
@@ -41,65 +54,52 @@ export function useMenuEngine(
     [availableItems, kitchenStatus, viewedItemIds, sortByRules]
   );
 
-  // Top picks: up to 4, ensuring category diversity
+  // Top picks: up to 4, category-diverse
   const topPicks = useMemo(() => {
-    const seen = new Set<string>();
+    const seen  = new Set<string>();
     const picks: MenuItem[] = [];
     for (const item of sortedItems) {
       if (picks.length >= 4) break;
-      if (!seen.has(item.category)) {
-        seen.add(item.category);
-        picks.push(item);
-      }
+      if (!seen.has(item.category)) { seen.add(item.category); picks.push(item); }
     }
-    if (picks.length < 4) {
-      for (const item of sortedItems) {
-        if (picks.length >= 4) break;
-        if (!picks.find((p) => p.id === item.id)) picks.push(item);
-      }
+    // Backfill if not enough diverse categories
+    for (const item of sortedItems) {
+      if (picks.length >= 4) break;
+      if (!picks.find(p => p.id === item.id)) picks.push(item);
     }
     return picks;
   }, [sortedItems]);
 
-  // Quick picks: fast prep + popular + high profit (deduplicated, max 5)
+  // Quick picks: fast + popular + high profit, deduplicated, max 5
   const quickPicks = useMemo(() => {
     const fastItems = availableItems
-      .filter((i) => i.prep_time === "fast")
+      .filter(i => i.prep_time === "fast")
       .sort((a, b) => b.clicks - a.clicks)
       .slice(0, 2);
 
-    const popularItem = [...availableItems].sort((a, b) => b.clicks - a.clicks)[0];
-    const highProfitItem = availableItems
-      .filter((i) => i.profit_tag === "high")
-      .sort((a, b) => b.clicks - a.clicks)[0];
+    const popular    = [...availableItems].sort((a, b) => b.clicks - a.clicks)[0];
+    const highProfit = availableItems.filter(i => i.profit_tag === "high").sort((a, b) => b.clicks - a.clicks)[0];
 
-    const candidates = [popularItem, highProfitItem, ...fastItems].filter(Boolean) as MenuItem[];
     const seen = new Set<number>();
-    return candidates.filter((item) => {
-      if (seen.has(item.id)) return false;
-      seen.add(item.id);
-      return true;
-    }).slice(0, 5);
+    return ([popular, highProfit, ...fastItems].filter(Boolean) as MenuItem[])
+      .filter(item => { if (seen.has(item.id)) return false; seen.add(item.id); return true; })
+      .slice(0, 5);
   }, [availableItems]);
 
-  // Full menu: filtered and sorted
+  // Full menu: filtered + sorted
   const fullMenu = useMemo(() => {
     let filtered = sortedItems;
-
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(
-        (item) =>
-          item.name.toLowerCase().includes(term) ||
-          item.description.toLowerCase().includes(term) ||
-          item.category.toLowerCase().includes(term)
+      filtered = filtered.filter(item =>
+        item.name.toLowerCase().includes(term) ||
+        item.description.toLowerCase().includes(term) ||
+        item.category.toLowerCase().includes(term)
       );
     }
-
     if (activeCategory !== "All") {
-      filtered = filtered.filter((item) => item.category === activeCategory);
+      filtered = filtered.filter(item => item.category === activeCategory);
     }
-
     return filtered;
   }, [sortedItems, searchTerm, activeCategory]);
 
@@ -111,19 +111,11 @@ export function usePersonalizationTracker() {
     try {
       const stored = localStorage.getItem("ghostMenuViewedItems");
       const prev: number[] = stored ? JSON.parse(stored) : [];
-      const updated = [itemId, ...prev.filter((id) => id !== itemId)].slice(0, 20);
+      const updated = [itemId, ...prev.filter(id => id !== itemId)].slice(0, 20);
       localStorage.setItem("ghostMenuViewedItems", JSON.stringify(updated));
+      // Dispatch storage event so useMenuEngine updates if needed
+      window.dispatchEvent(new StorageEvent("storage", { key: "ghostMenuViewedItems" }));
     } catch {}
   };
-
-  const getViewedIds = (): number[] => {
-    try {
-      const stored = localStorage.getItem("ghostMenuViewedItems");
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  };
-
-  return { trackView, getViewedIds };
+  return { trackView };
 }

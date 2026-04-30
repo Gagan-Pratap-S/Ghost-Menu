@@ -14,18 +14,19 @@ export default function AdminPage() {
   const [items, setItems]     = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Auth guard — redirect to login if not authenticated
+  // Client-side auth guard (middleware handles server-side)
   useEffect(() => {
     if (!authLoading && !session) router.replace("/admin/login");
   }, [session, authLoading, router]);
 
-  // Fetch items scoped to this admin's restaurant
+  // Fetch items scoped strictly to this admin's restaurant
   useEffect(() => {
-    if (!session) return;
+    if (!session || !restaurant?.id) return;
     setLoading(true);
-    fetchMenuItems(restaurant?.id).then((data) => {
-      if (data && Array.isArray(data) && data.length > 0) setItems(data);
-      else setItems(initialMenuItems); // fallback for local dev
+    fetchMenuItems(restaurant.id).then((data) => {
+      // Only fall back to local data if genuinely unconfigured (dev mode)
+      if (data && Array.isArray(data)) setItems(data.length > 0 ? data : initialMenuItems);
+      else setItems(initialMenuItems);
       setLoading(false);
     }).catch(() => {
       setItems(initialMenuItems);
@@ -34,7 +35,7 @@ export default function AdminPage() {
   }, [session, restaurant?.id]);
 
   const handleAdd = async (data: Omit<MenuItem, "id" | "clicks" | "views" | "tag">) => {
-    if (!restaurant) return;
+    if (!restaurant?.id) return;
     const tempId   = -Date.now();
     const tempItem: MenuItem = { ...data, id: tempId, clicks: 0, views: 0 };
     setItems(prev => [...prev, tempItem]);
@@ -44,15 +45,20 @@ export default function AdminPage() {
   };
 
   const handleUpdate = async (id: number, data: Partial<MenuItem>) => {
+    if (!restaurant?.id) return;
     setItems(prev => prev.map(i => i.id === id ? { ...i, ...data } : i));
-    const updated = await updateMenuItem(id, data);
+    const updated = await updateMenuItem(id, restaurant.id, data);
     if (updated) setItems(prev => prev.map(i => i.id === id ? { ...i, ...updated } : i));
   };
 
   const handleDelete = async (id: number) => {
+    if (!restaurant?.id) return;
     setItems(prev => prev.filter(i => i.id !== id));
-    const ok = await deleteMenuItem(id);
-    if (!ok) fetchMenuItems(restaurant?.id).then(d => { if (d) setItems(d); });
+    const ok = await deleteMenuItem(id, restaurant.id);
+    if (!ok) {
+      // Rollback — re-fetch the real state
+      fetchMenuItems(restaurant.id).then(d => { if (d) setItems(d); });
+    }
   };
 
   if (authLoading || !session) return null;

@@ -14,6 +14,7 @@ interface Props {
   guestName: string;
   memberCount: number;
   restaurantName: string;
+  restaurantId?: string;
   onItemClick: (item: MenuItem) => void;
 }
 
@@ -52,7 +53,7 @@ function SkeletonList() {
   );
 }
 
-export default function MenuPage({ items, loading, kitchenStatus, guestName, memberCount, restaurantName, onItemClick }: Props) {
+export default function MenuPage({ items, loading, kitchenStatus, guestName, memberCount, restaurantName, restaurantId, onItemClick }: Props) {
   const [searchTerm, setSearchTerm]         = useState("");
   const [searchOpen, setSearchOpen]         = useState(false);
   const [activeCategory, setActiveCategory] = useState("All");
@@ -199,7 +200,7 @@ export default function MenuPage({ items, loading, kitchenStatus, guestName, mem
       )}
 
       {/* Floating cart button — only renders when cart has items */}
-      <CartButton />
+      <CartButton restaurantId={restaurantId} guestName={guestName} memberCount={memberCount} />
     </div>
   );
 }

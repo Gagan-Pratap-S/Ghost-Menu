@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
-export default function LoginPage() {
-  const router  = useRouter();
+function LoginForm() {
+  const router       = useRouter();
+  const searchParams = useSearchParams();
   const { login, session, loading } = useAuth();
 
   const [email, setEmail]       = useState("");
@@ -14,10 +15,13 @@ export default function LoginPage() {
   const [busy, setBusy]         = useState(false);
   const [showPass, setShowPass] = useState(false);
 
-  // Already logged in → go straight to admin
+  // Already logged in → forward to ?next or /admin
   useEffect(() => {
-    if (!loading && session) router.replace("/admin");
-  }, [session, loading, router]);
+    if (!loading && session) {
+      const next = searchParams.get("next") ?? "/admin";
+      router.replace(next);
+    }
+  }, [session, loading, router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +33,8 @@ export default function LoginPage() {
       setError(err);
       setBusy(false);
     } else {
-      router.replace("/admin");
+      const next = searchParams.get("next") ?? "/admin";
+      router.replace(next);
     }
   };
 
@@ -47,7 +52,10 @@ export default function LoginPage() {
           <p className="text-stone-500 text-sm mt-1">Ghost Menu · Restaurant Portal</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-stone-800/70 backdrop-blur-md border border-stone-700/60 rounded-3xl p-6 space-y-4 shadow-2xl">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-stone-800/70 backdrop-blur-md border border-stone-700/60 rounded-3xl p-6 space-y-4 shadow-2xl"
+        >
           <div>
             <label className="text-xs font-semibold text-stone-400 block mb-1.5">Email</label>
             <input
@@ -73,9 +81,13 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 className="w-full bg-stone-700/60 border border-stone-600/60 text-white placeholder-stone-600 rounded-2xl px-4 py-3 pr-11 text-sm focus:outline-none focus:border-orange-500/70 focus:bg-stone-700 transition-all"
               />
-              <button type="button" onClick={() => setShowPass(v => !v)}
+              <button
+                type="button"
+                onClick={() => setShowPass((v) => !v)}
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300 text-xs font-medium"
-              >{showPass ? "Hide" : "Show"}</button>
+              >
+                {showPass ? "Hide" : "Show"}
+              </button>
             </div>
           </div>
 
@@ -85,7 +97,9 @@ export default function LoginPage() {
             </div>
           )}
 
-          <button type="submit" disabled={busy || !email || !password}
+          <button
+            type="submit"
+            disabled={busy || !email || !password}
             className="w-full bg-orange-500 hover:bg-orange-400 active:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-display font-bold rounded-2xl py-3.5 text-sm transition-all shadow-lg shadow-orange-500/20"
           >
             {busy ? "Signing in..." : "Sign In →"}
@@ -97,5 +111,14 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+// useSearchParams requires Suspense boundary in Next.js App Router
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   );
 }
