@@ -1,5 +1,7 @@
 "use client";
 
+import { FALLBACK_IMAGE } from "@/lib/constants";
+
 import { useState, useMemo } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -168,7 +170,7 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
                     <span className="text-xs font-bold text-stone-300 w-4 flex-shrink-0">#{idx + 1}</span>
                     <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-stone-100 flex-shrink-0">
                       <Image src={item.image} alt={item.name} fill sizes="32px" className="object-cover"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                        onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-stone-900 truncate">{item.name}</p>
@@ -346,7 +348,7 @@ function AdminItemRow({
       <div className="flex gap-3 mb-2.5">
         <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-stone-100 flex-shrink-0">
           <Image src={item.image} alt={item.name} fill sizes="48px" className="object-cover"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+            onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-display font-bold text-sm text-stone-900 truncate">{item.name}</p>

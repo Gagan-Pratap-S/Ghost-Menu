@@ -1,5 +1,7 @@
 "use client";
 
+import { FALLBACK_IMAGE } from "@/lib/constants";
+
 import { useEffect } from "react";
 import Image from "next/image";
 import { MenuItem, comboSuggestions, initialMenuItems } from "@/data/menuData";
@@ -50,7 +52,7 @@ export default function ItemModal({ item, onClose, onComboItemClick }: Props) {
         {/* Image */}
         <div className="relative h-52 w-full bg-stone-200 overflow-hidden rounded-t-3xl">
           <Image src={item.image} alt={item.name} fill sizes="448px" className="object-cover" priority
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+            onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
           {item.tag && (
             <span className={`absolute bottom-3 left-4 px-3 py-1 text-xs font-bold rounded-full shadow ${
               item.tag.includes("Popular") ? "bg-orange-500 text-white" : "bg-amber-400 text-amber-900"

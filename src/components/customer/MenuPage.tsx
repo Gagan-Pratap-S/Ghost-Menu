@@ -13,6 +13,7 @@ interface Props {
   kitchenStatus: "normal" | "busy";
   guestName: string;
   memberCount: number;
+  tableNumber: string;
   restaurantName: string;
   restaurantId?: string;
   onItemClick: (item: MenuItem) => void;
@@ -53,7 +54,7 @@ function SkeletonList() {
   );
 }
 
-export default function MenuPage({ items, loading, kitchenStatus, guestName, memberCount, restaurantName, restaurantId, onItemClick }: Props) {
+export default function MenuPage({ items, loading, kitchenStatus, guestName, memberCount, tableNumber, restaurantName, restaurantId, onItemClick }: Props) {
   const [searchTerm, setSearchTerm]         = useState("");
   const [searchOpen, setSearchOpen]         = useState(false);
   const [activeCategory, setActiveCategory] = useState("All");
@@ -72,8 +73,9 @@ export default function MenuPage({ items, loading, kitchenStatus, guestName, mem
 
   const hour = new Date().getHours();
   const timeGreet = hour < 12 ? "☀️" : hour < 17 ? "👋" : "🌙";
+  const tableLabel = tableNumber && tableNumber !== "QR" ? ` · Table ${tableNumber}` : ` · Table for ${memberCount}`;
   const greeting = guestName
-    ? `Hi ${guestName} ${timeGreet} · Table for ${memberCount}`
+    ? `Hi ${guestName} ${timeGreet}${tableLabel}`
     : `${hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"} ${timeGreet}`;
 
   return (
@@ -200,7 +202,7 @@ export default function MenuPage({ items, loading, kitchenStatus, guestName, mem
       )}
 
       {/* Floating cart button — only renders when cart has items */}
-      <CartButton restaurantId={restaurantId} guestName={guestName} memberCount={memberCount} />
+      <CartButton restaurantId={restaurantId} guestName={guestName} memberCount={memberCount} tableNumber={tableNumber} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
@@ -14,51 +14,50 @@ function LoginForm() {
   const [error, setError]       = useState("");
   const [busy, setBusy]         = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const submitting               = useRef(false); // prevent double-submit
 
-  // Already logged in → forward to ?next or /admin
+  // Redirect if already authenticated (after auth resolves)
   useEffect(() => {
-  if (!loading && session) {
-    const next = searchParams.get("next") ?? "/admin";
-    setBusy(false); // ✅ ensure UI resets
-    router.replace(next);
+    if (!loading && session) {
+      const next = searchParams.get("next") ?? "/admin";
+      router.replace(next);
+    }
+  }, [session, loading, router, searchParams]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (submitting.current || !email.trim() || !password) return;
+    submitting.current = true;
+    setBusy(true);
+    setError("");
+
+    const err = await login(email.trim(), password);
+
+    if (err) {
+      setError(err);
+      setBusy(false);
+      submitting.current = false;
+      // Don't redirect — stay on login page to show error
+    }
+    // On success: useEffect above handles the redirect once session state updates
+    // (busy stays true while redirect happens — no flash back to form)
+  };
+
+  // Show spinner while auth check runs on mount
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-stone-900 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
-}, [session, loading, router, searchParams]);
 
- const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-
-  if (!email.trim() || !password) return;
-
-  setBusy(true);
-  setError("");
-
-  const err = await login(email.trim(), password);
-
-  if (err) {
-    setError(err);
-    setBusy(false);
-  } else {
-    // ✅ SET COOKIE FOR MIDDLEWARE
-    document.cookie = "ghost_admin_auth=1; path=/";
-
-    const next = searchParams.get("next") ?? "/admin";
-    router.replace(next);
-  }
-};
-
-if (loading) {
-  return null; // or loader
-}
-
-if (!session) {
-  router.replace("/admin/login");
-  return null;
-}
+  // Don't render form if already logged in (redirect is happening)
+  if (session) return null;
 
   return (
     <div className="min-h-screen bg-stone-900 flex items-center justify-center px-5">
       <div className="w-full max-w-sm animate-slideUp">
-        {/* Brand */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-orange-500 rounded-2xl mb-3 shadow-lg shadow-orange-500/30">
             <span className="text-2xl">🍽️</span>
@@ -80,7 +79,8 @@ if (!session) {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              className="w-full bg-stone-700/60 border border-stone-600/60 text-white placeholder-stone-600 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500/70 focus:bg-stone-700 transition-all"
+              disabled={busy}
+              className="w-full bg-stone-700/60 border border-stone-600/60 text-white placeholder-stone-600 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500/70 focus:bg-stone-700 transition-all disabled:opacity-50"
             />
           </div>
 
@@ -94,11 +94,12 @@ if (!session) {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                className="w-full bg-stone-700/60 border border-stone-600/60 text-white placeholder-stone-600 rounded-2xl px-4 py-3 pr-11 text-sm focus:outline-none focus:border-orange-500/70 focus:bg-stone-700 transition-all"
+                disabled={busy}
+                className="w-full bg-stone-700/60 border border-stone-600/60 text-white placeholder-stone-600 rounded-2xl px-4 py-3 pr-11 text-sm focus:outline-none focus:border-orange-500/70 focus:bg-stone-700 transition-all disabled:opacity-50"
               />
               <button
                 type="button"
-                onClick={() => setShowPass((v) => !v)}
+                onClick={() => setShowPass(v => !v)}
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300 text-xs font-medium"
               >
                 {showPass ? "Hide" : "Show"}
@@ -117,7 +118,12 @@ if (!session) {
             disabled={busy || !email || !password}
             className="w-full bg-orange-500 hover:bg-orange-400 active:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-display font-bold rounded-2xl py-3.5 text-sm transition-all shadow-lg shadow-orange-500/20"
           >
-            {busy ? "Signing in..." : "Sign In →"}
+            {busy ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Signing in…
+              </span>
+            ) : "Sign In →"}
           </button>
         </form>
 
@@ -129,10 +135,13 @@ if (!session) {
   );
 }
 
-// useSearchParams requires Suspense boundary in Next.js App Router
 export default function LoginPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={
+      <div className="min-h-screen bg-stone-900 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
       <LoginForm />
     </Suspense>
   );

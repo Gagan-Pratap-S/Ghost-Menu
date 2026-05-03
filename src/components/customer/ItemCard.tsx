@@ -1,5 +1,7 @@
 "use client";
 
+import { FALLBACK_IMAGE } from "@/lib/constants";
+
 import Image from "next/image";
 import { MenuItem } from "@/data/menuData";
 import { useCart } from "@/context/CartContext";
@@ -25,7 +27,7 @@ function Img({ src, alt, sizes, priority }: { src: string; alt: string; sizes: s
     <Image src={src} alt={alt} fill sizes={sizes}
       className="object-cover group-hover:scale-105 transition-transform duration-300"
       priority={priority}
-      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+      onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }}
     />
   );
 }

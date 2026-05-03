@@ -8,9 +8,10 @@ interface Props {
   restaurantId?: string;
   guestName?: string;
   memberCount?: number;
+  tableNumber?: string;
 }
 
-export default function CartButton({ restaurantId, guestName, memberCount }: Props) {
+export default function CartButton({ restaurantId, guestName, memberCount, tableNumber }: Props) {
   const { totalItems, totalPrice } = useCart();
   const [open, setOpen]       = useState(false);
   const [visible, setVisible] = useState(false);
@@ -52,6 +53,7 @@ export default function CartButton({ restaurantId, guestName, memberCount }: Pro
         restaurantId={restaurantId}
         guestName={guestName}
         memberCount={memberCount}
+        tableNumber={tableNumber}
       />
     </>
   );
