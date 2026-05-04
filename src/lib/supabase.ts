@@ -1,74 +1,35 @@
-// ─── Supabase REST client ─────────────────────────────────────────────────────
-// - No module-level auth token (was leaking between contexts)
-// - Token comes from AuthStore singleton — set after login, cleared on logout
-// - All admin writes use the user's JWT, not the anon key
-// - Tracking RPCs always use anon key (intentionally public)
+// ─── Ghost Menu — Supabase layer ─────────────────────────────────────────────
+// Auth:  @supabase/supabase-js official client (handles refresh, persistence)
+// Data:  raw REST fetch (small bundle, full control, easy to unit-test)
+// RT:    @supabase/supabase-js Realtime channel for live orders
+
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL  ?? "";
 const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
 export const isSupabaseConfigured = !!(SUPABASE_URL && SUPABASE_ANON);
 
-// ─── Auth token store — simple singleton, not a module-level let ─────────────
-const AuthStore = {
-  _token: null as string | null,
-  _refresh: null as string | null,
-  _expiresAt: 0,
-  set(token: string, refresh: string, expiresIn: number) {
-    this._token    = token;
-    this._refresh  = refresh;
-    this._expiresAt = Date.now() + (expiresIn - 60) * 1000; // 60s buffer
-  },
-  get()      { return this._token; },
-  getRefresh() { return this._refresh; },
-  isExpired()  { return this._token !== null && Date.now() > this._expiresAt; },
-  clear()    { this._token = null; this._refresh = null; this._expiresAt = 0; },
-};
-
-export function setAuthToken(token: string | null, refresh: string | null = null, expiresIn = 3600) {
-  if (token) AuthStore.set(token, refresh ?? "", expiresIn);
-  else       AuthStore.clear();
-}
-
-// ─── Token refresh ────────────────────────────────────────────────────────────
-export async function refreshSession(): Promise<boolean> {
-  const rt = AuthStore.getRefresh();
-  if (!rt || !isSupabaseConfigured) return false;
-  try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-      method: "POST",
-      headers: { apikey: SUPABASE_ANON, "Content-Type": "application/json" },
-      body: JSON.stringify({ refresh_token: rt }),
+// ─── Official Supabase client (auth + realtime only) ─────────────────────────
+function makeClient(): SupabaseClient {
+  if (!isSupabaseConfigured) {
+    return createClient("https://placeholder.supabase.co", "placeholder-key", {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     });
-    if (!res.ok) { AuthStore.clear(); return false; }
-    const data = await res.json();
-    AuthStore.set(data.access_token, data.refresh_token, data.expires_in ?? 3600);
-    return true;
-  } catch { return false; }
+  }
+  return createClient(SUPABASE_URL, SUPABASE_ANON, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
+      storageKey: "ghostMenuSupabaseSession",
+    },
+  });
 }
 
-// ─── Headers — auto-refreshes token if expired ────────────────────────────────
-async function authHeaders(): Promise<Record<string, string>> {
-  if (AuthStore.isExpired()) await refreshSession();
-  const token = AuthStore.get() ?? SUPABASE_ANON;
-  return {
-    apikey: SUPABASE_ANON,
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json",
-    Prefer: "return=representation",
-  };
-}
+export const supabaseClient = makeClient();
 
-function publicHeaders(): Record<string, string> {
-  return {
-    apikey: SUPABASE_ANON,
-    Authorization: `Bearer ${SUPABASE_ANON}`,
-    "Content-Type": "application/json",
-    Prefer: "return=representation",
-  };
-}
-
-// ─── AUTH ─────────────────────────────────────────────────────────────────────
+// ─── Internal session type ────────────────────────────────────────────────────
 export interface AuthSession {
   access_token: string;
   refresh_token: string;
@@ -76,62 +37,59 @@ export interface AuthSession {
   user: { id: string; email: string };
 }
 
+function mapSession(s: import("@supabase/supabase-js").Session | null): AuthSession | null {
+  if (!s) return null;
+  return {
+    access_token:  s.access_token,
+    refresh_token: s.refresh_token ?? "",
+    expires_in:    s.expires_in    ?? 3600,
+    user: { id: s.user.id, email: s.user.email ?? "" },
+  };
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
 export async function signIn(
   email: string,
   password: string
 ): Promise<{ session: AuthSession | null; error: string | null }> {
   if (!isSupabaseConfigured) return { session: null, error: "Supabase not configured" };
-  try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      method: "POST",
-      headers: { apikey: SUPABASE_ANON, "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) return { session: null, error: data.error_description ?? data.msg ?? "Login failed" };
-    const session: AuthSession = {
-      access_token:  data.access_token,
-      refresh_token: data.refresh_token,
-      expires_in:    data.expires_in ?? 3600,
-      user:          data.user,
-    };
-    AuthStore.set(session.access_token, session.refresh_token, session.expires_in);
-    return { session, error: null };
-  } catch { return { session: null, error: "Network error — check connection" }; }
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error || !data.session) return { session: null, error: error?.message ?? "Login failed" };
+  return { session: mapSession(data.session), error: null };
 }
 
-export async function signOut() {
-  if (!isSupabaseConfigured) return;
-  const token = AuthStore.get();
-  try {
-    if (token) {
-      await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
-        method: "POST",
-        headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${token}` },
-      });
-    }
-  } catch {}
-  AuthStore.clear();
+export async function signOut(): Promise<void> {
+  await supabaseClient.auth.signOut();
 }
 
-// Validate a stored session token is still live (call on app mount)
-export async function validateSession(token: string): Promise<boolean> {
-  if (!isSupabaseConfigured || !token) return false;
-  try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${token}` },
-    });
-    return res.ok;
-  } catch { return false; }
+export async function getStoredSession(): Promise<AuthSession | null> {
+  const { data } = await supabaseClient.auth.getSession();
+  return mapSession(data.session);
+}
+
+// ─── REST headers ─────────────────────────────────────────────────────────────
+async function authHeaders(): Promise<Record<string, string>> {
+  const { data } = await supabaseClient.auth.getSession();
+  const token = data.session?.access_token ?? SUPABASE_ANON;
+  return {
+    apikey:         SUPABASE_ANON,
+    Authorization:  `Bearer ${token}`,
+    "Content-Type": "application/json",
+    Prefer:         "return=representation",
+  };
+}
+
+function publicHeaders(): Record<string, string> {
+  return {
+    apikey:         SUPABASE_ANON,
+    Authorization:  `Bearer ${SUPABASE_ANON}`,
+    "Content-Type": "application/json",
+    Prefer:         "return=representation",
+  };
 }
 
 // ─── RESTAURANT ───────────────────────────────────────────────────────────────
-export interface Restaurant {
-  id: string;
-  name: string;
-  slug: string;
-  owner_id: string;
-}
+export interface Restaurant { id: string; name: string; slug: string; owner_id: string; }
 
 export async function fetchRestaurantBySlug(slug: string): Promise<Restaurant | null> {
   if (!isSupabaseConfigured) return null;
@@ -163,7 +121,6 @@ export async function fetchRestaurantByOwner(ownerId: string): Promise<Restauran
 // ─── MENU ITEMS ───────────────────────────────────────────────────────────────
 import type { MenuItem } from "@/data/menuData";
 
-// Columns that exist in the DB — strip anything else before sending
 const DB_COLUMNS = new Set([
   "name","price","category","image","description",
   "available","featured","prep_time","profit_tag",
@@ -177,9 +134,7 @@ function sanitize(data: Record<string, unknown>): Record<string, unknown> {
 export async function fetchMenuItems(restaurantId?: string): Promise<MenuItem[] | null> {
   if (!isSupabaseConfigured) return null;
   try {
-    const filter = restaurantId
-      ? `&restaurant_id=eq.${encodeURIComponent(restaurantId)}`
-      : "";
+    const filter = restaurantId ? `&restaurant_id=eq.${encodeURIComponent(restaurantId)}` : "";
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/menu_items?order=id.asc${filter}`,
       { headers: publicHeaders() }
@@ -198,9 +153,7 @@ export async function createMenuItem(
     const h = await authHeaders();
     const payload = sanitize({ ...data, clicks: 0, views: 0, restaurant_id: restaurantId } as Record<string, unknown>);
     const res = await fetch(`${SUPABASE_URL}/rest/v1/menu_items`, {
-      method: "POST",
-      headers: h,
-      body: JSON.stringify(payload),
+      method: "POST", headers: h, body: JSON.stringify(payload),
     });
     if (!res.ok) return null;
     const rows = await res.json();
@@ -209,15 +162,13 @@ export async function createMenuItem(
 }
 
 export async function updateMenuItem(
-  id: number,
-  restaurantId: string,
+  id: number, restaurantId: string,
   data: Partial<Omit<MenuItem, "id" | "clicks" | "views" | "tag">>
 ): Promise<MenuItem | null> {
   if (!isSupabaseConfigured) return null;
   try {
     const h = await authHeaders();
     const payload = sanitize(data as Record<string, unknown>);
-    // Filter by both id AND restaurant_id — double safety on top of RLS
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/menu_items?id=eq.${id}&restaurant_id=eq.${encodeURIComponent(restaurantId)}`,
       { method: "PATCH", headers: h, body: JSON.stringify(payload) }
@@ -232,7 +183,6 @@ export async function deleteMenuItem(id: number, restaurantId: string): Promise<
   if (!isSupabaseConfigured) return false;
   try {
     const h = await authHeaders();
-    // Always scope by restaurant_id — prevents cross-tenant deletes even if RLS is misconfigured
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/menu_items?id=eq.${id}&restaurant_id=eq.${encodeURIComponent(restaurantId)}`,
       { method: "DELETE", headers: h }
@@ -242,14 +192,11 @@ export async function deleteMenuItem(id: number, restaurantId: string): Promise<
 }
 
 // ─── ORDERS ───────────────────────────────────────────────────────────────────
-export type OrderStatus = "pending" | "preparing" | "done" | "cancelled";
+// Status pipeline: pending → preparing → ready → served
+// cancelled is a terminal state reachable from pending or preparing
+export type OrderStatus = "pending" | "preparing" | "ready" | "served" | "cancelled";
 
-export interface OrderItem {
-  id: number;
-  name: string;
-  price: number;
-  quantity: number;
-}
+export interface OrderItem { id: number; name: string; price: number; quantity: number; }
 
 export interface Order {
   id?: string;
@@ -263,18 +210,46 @@ export interface Order {
   created_at?: string;
 }
 
-export async function createOrder(order: Omit<Order, "id" | "created_at" | "status">): Promise<Order | null> {
-  if (!isSupabaseConfigured) return null;
+export interface CreateOrderInput {
+  restaurant_id: string;
+  guest_name: string;
+  member_count: number;
+  table_number: string;
+  items: OrderItem[];
+  total: number;
+}
+
+export async function createOrder(input: CreateOrderInput): Promise<{ order: Order | null; error: string | null }> {
+  // Hard validation — never silently succeed
+  if (!input.restaurant_id) return { order: null, error: "No restaurant selected" };
+  if (!input.items.length)   return { order: null, error: "Cart is empty" };
+  if (input.total <= 0)      return { order: null, error: "Invalid order total" };
+
+  if (!isSupabaseConfigured) return { order: null, error: "Supabase not configured — cannot place order" };
+
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
       method: "POST",
-      headers: publicHeaders(), // customers are anon
-      body: JSON.stringify({ ...order, status: "pending" }),
+      headers: {
+        // Use return=minimal so Supabase does NOT attempt to SELECT the row
+        // back after INSERT. The SELECT policy restricts to authenticated owners,
+        // so "return=representation" (which triggers a SELECT) would fail for anon.
+        apikey:         SUPABASE_ANON,
+        Authorization:  `Bearer ${SUPABASE_ANON}`,
+        "Content-Type": "application/json",
+        Prefer:         "return=minimal",
+      },
+      body: JSON.stringify({ ...input, status: "pending" }),
     });
-    if (!res.ok) return null;
-    const rows = await res.json();
-    return Array.isArray(rows) ? rows[0] : rows;
-  } catch { return null; }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return { order: null, error: body?.message ?? body?.hint ?? `Server error ${res.status}` };
+    }
+    // With return=minimal the body is empty — generate a client-side placeholder id
+    return { order: { ...input, status: "pending", id: crypto.randomUUID() }, error: null };
+  } catch (e) {
+    return { order: null, error: e instanceof Error ? e.message : "Network error" };
+  }
 }
 
 export async function fetchOrders(restaurantId: string): Promise<Order[]> {
@@ -282,7 +257,7 @@ export async function fetchOrders(restaurantId: string): Promise<Order[]> {
   try {
     const h = await authHeaders();
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/orders?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=created_at.desc&limit=50`,
+      `${SUPABASE_URL}/rest/v1/orders?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=created_at.desc&limit=100`,
       { headers: h }
     );
     if (!res.ok) return [];
@@ -295,15 +270,51 @@ export async function updateOrderStatus(id: string, status: OrderStatus): Promis
   try {
     const h = await authHeaders();
     const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${id}`, {
-      method: "PATCH",
-      headers: h,
-      body: JSON.stringify({ status }),
+      method: "PATCH", headers: h, body: JSON.stringify({ status }),
     });
     return res.ok;
   } catch { return false; }
 }
 
-// ─── TRACKING — always anon, no restaurant guard needed (item id is enough) ───
+// ─── REALTIME — live order subscription ──────────────────────────────────────
+// Returns an unsubscribe function. Call it in useEffect cleanup.
+export function subscribeToOrders(
+  restaurantId: string,
+  onInsert: (order: Order) => void,
+  onUpdate: (order: Order) => void
+): () => void {
+  if (!isSupabaseConfigured) return () => {};
+
+  const channel = supabaseClient
+    .channel(`orders:${restaurantId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "orders",
+        filter: `restaurant_id=eq.${restaurantId}`,
+      },
+      (payload) => onInsert(payload.new as Order)
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "orders",
+        filter: `restaurant_id=eq.${restaurantId}`,
+      },
+      (payload) => onUpdate(payload.new as Order)
+    )
+    .subscribe();
+
+  return () => {
+    supabaseClient.removeChannel(channel);
+  };
+}
+
+// ─── TRACKING ─────────────────────────────────────────────────────────────────
 async function rpc(fn: string, body: object) {
   if (!isSupabaseConfigured) return;
   try {

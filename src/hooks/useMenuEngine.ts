@@ -1,4 +1,5 @@
 import { useMemo, useEffect, useState } from "react";
+import { LS } from "@/lib/constants";
 import { MenuItem } from "@/data/menuData";
 import { useRuleEngine } from "./useRuleEngine";
 
@@ -13,7 +14,7 @@ interface MenuOutput {
 function getViewedItemIds(): number[] {
   if (typeof window === "undefined") return [];
   try {
-    const stored = localStorage.getItem("ghostMenuViewedItems");
+    const stored = localStorage.getItem(LS.VIEWED_ITEMS);
     return stored ? JSON.parse(stored) : [];
   } catch { return []; }
 }
@@ -32,7 +33,7 @@ export function useMenuEngine(
   // Keep in sync if another tab updates it
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === "ghostMenuViewedItems") setViewedItemIds(getViewedItemIds());
+      if (e.key === LS.VIEWED_ITEMS) setViewedItemIds(getViewedItemIds());
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
@@ -109,12 +110,12 @@ export function useMenuEngine(
 export function usePersonalizationTracker() {
   const trackView = (itemId: number) => {
     try {
-      const stored = localStorage.getItem("ghostMenuViewedItems");
+      const stored = localStorage.getItem(LS.VIEWED_ITEMS);
       const prev: number[] = stored ? JSON.parse(stored) : [];
       const updated = [itemId, ...prev.filter(id => id !== itemId)].slice(0, 20);
-      localStorage.setItem("ghostMenuViewedItems", JSON.stringify(updated));
+      localStorage.setItem(LS.VIEWED_ITEMS, JSON.stringify(updated));
       // Dispatch storage event so useMenuEngine updates if needed
-      window.dispatchEvent(new StorageEvent("storage", { key: "ghostMenuViewedItems" }));
+      window.dispatchEvent(new StorageEvent("storage", { key: LS.VIEWED_ITEMS }));
     } catch {}
   };
   return { trackView };

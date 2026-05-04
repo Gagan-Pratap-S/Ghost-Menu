@@ -7,38 +7,53 @@ import { initialMenuItems, MenuItem } from "@/data/menuData";
 import { fetchMenuItems, createMenuItem, updateMenuItem, deleteMenuItem } from "@/lib/supabase";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 
+function LoadingScreen({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen bg-stone-900 flex flex-col items-center justify-center gap-3">
+      <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      <p className="text-stone-500 text-sm">{message}</p>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const { session, restaurant, loading: authLoading } = useAuth();
 
-  const [items, setItems]     = useState<MenuItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems]       = useState<MenuItem[]>([]);
+  const [dataLoading, setDataLoading] = useState(false);
 
-  // Client-side auth guard (middleware handles server-side)
+  // Auth guard — wait for auth to resolve before redirecting
   useEffect(() => {
-    if (!authLoading && !session) router.replace("/admin/login");
+    if (authLoading) return;
+    if (!session) {
+      router.replace("/admin/login");
+    }
   }, [session, authLoading, router]);
 
-  // Fetch items scoped strictly to this admin's restaurant
+  // Fetch menu items once we have a confirmed session + restaurant
   useEffect(() => {
     if (!session || !restaurant?.id) return;
-    setLoading(true);
-    fetchMenuItems(restaurant.id).then((data) => {
-      // Only fall back to local data if genuinely unconfigured (dev mode)
-      if (data && Array.isArray(data)) setItems(data.length > 0 ? data : initialMenuItems);
-      else setItems(initialMenuItems);
-      setLoading(false);
-    }).catch(() => {
-      setItems(initialMenuItems);
-      setLoading(false);
-    });
+    setDataLoading(true);
+    fetchMenuItems(restaurant.id)
+      .then((data) => {
+        if (data && data.length > 0) setItems(data);
+        else setItems(initialMenuItems); // local fallback in dev
+      })
+      .catch(() => setItems(initialMenuItems))
+      .finally(() => setDataLoading(false));
   }, [session, restaurant?.id]);
+
+  // Show spinner while auth resolves
+  if (authLoading) return <LoadingScreen message="Checking auth…" />;
+
+  // Show spinner while redirecting (no session)
+  if (!session) return <LoadingScreen message="Redirecting…" />;
 
   const handleAdd = async (data: Omit<MenuItem, "id" | "clicks" | "views" | "tag">) => {
     if (!restaurant?.id) return;
-    const tempId   = -Date.now();
-    const tempItem: MenuItem = { ...data, id: tempId, clicks: 0, views: 0 };
-    setItems(prev => [...prev, tempItem]);
+    const tempId = -Date.now();
+    setItems(prev => [...prev, { ...data, id: tempId, clicks: 0, views: 0 }]);
     const created = await createMenuItem(data, restaurant.id);
     if (created) setItems(prev => prev.map(i => i.id === tempId ? created : i));
     else         setItems(prev => prev.filter(i => i.id !== tempId));
@@ -55,18 +70,13 @@ export default function AdminPage() {
     if (!restaurant?.id) return;
     setItems(prev => prev.filter(i => i.id !== id));
     const ok = await deleteMenuItem(id, restaurant.id);
-    if (!ok) {
-      // Rollback — re-fetch the real state
-      fetchMenuItems(restaurant.id).then(d => { if (d) setItems(d); });
-    }
+    if (!ok) fetchMenuItems(restaurant.id).then(d => { if (d) setItems(d); });
   };
-
-  if (authLoading || !session) return null;
 
   return (
     <AdminDashboard
       items={items}
-      loading={loading}
+      loading={dataLoading}
       restaurant={restaurant}
       onAdd={handleAdd}
       onUpdate={handleUpdate}

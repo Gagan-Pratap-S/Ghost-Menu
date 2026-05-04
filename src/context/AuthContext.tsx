@@ -4,11 +4,11 @@ import { createContext, useContext, useState, useEffect, useCallback, ReactNode 
 import {
   AuthSession, Restaurant,
   signIn, signOut,
+  getStoredSession,
   fetchRestaurantByOwner,
-  setAuthToken,
-  validateSession,
-  refreshSession,
+  supabaseClient,
 } from "@/lib/supabase";
+import { LS } from "@/lib/constants";
 
 interface AuthContextValue {
   session: AuthSession | null;
@@ -20,69 +20,86 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const SESSION_KEY    = "ghostMenuSession";
-const RESTAURANT_KEY = "ghostMenuRestaurant";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession]       = useState<AuthSession | null>(null);
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [loading, setLoading]       = useState(true);
 
-  // Restore + validate session on mount
+  // Restore session on mount via official Supabase client
+  // (it manages its own localStorage key and handles token refresh)
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+
+    async function init() {
       try {
-        const rawSession    = localStorage.getItem(SESSION_KEY);
-        const rawRestaurant = localStorage.getItem(RESTAURANT_KEY);
+        const s = await getStoredSession();
+        if (cancelled) return;
 
-        if (rawSession) {
-          const stored = JSON.parse(rawSession) as AuthSession;
-
-          // Re-hydrate AuthStore with token + refresh token
-          setAuthToken(stored.access_token, stored.refresh_token, stored.expires_in ?? 3600);
-
-          // Validate token is still alive — if expired, try refresh first
-          let valid = await validateSession(stored.access_token);
-          if (!valid) {
-            valid = await refreshSession();
-          }
-
-          if (valid) {
-            setSession(stored);
-            if (rawRestaurant) setRestaurant(JSON.parse(rawRestaurant));
-          } else {
-            // Token dead and can't refresh — clear everything
-            localStorage.removeItem(SESSION_KEY);
-            localStorage.removeItem(RESTAURANT_KEY);
-          }
+        if (s) {
+          setSession(s);
+          // Try restoring restaurant from cache first
+          try {
+            const raw = localStorage.getItem(LS.RESTAURANT);
+            if (raw) setRestaurant(JSON.parse(raw));
+          } catch {}
+          // Then re-fetch to ensure it's current
+          fetchRestaurantByOwner(s.user.id).then((rest) => {
+            if (cancelled || !rest) return;
+            setRestaurant(rest);
+            try { localStorage.setItem(LS.RESTAURANT, JSON.stringify(rest)); } catch {}
+          });
         }
       } catch {
-        // Corrupt storage — clear it
-        try {
-          localStorage.removeItem(SESSION_KEY);
-          localStorage.removeItem(RESTAURANT_KEY);
-        } catch {}
+        // If anything fails, start with no session — user will log in
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
-    })();
+    }
+
+    init();
+
+    // Subscribe to Supabase auth state changes (handles token refresh, sign-out from other tabs)
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(async (event, s) => {
+      if (cancelled) return;
+      if (event === "SIGNED_OUT" || !s) {
+        setSession(null);
+        setRestaurant(null);
+        try { localStorage.removeItem(LS.RESTAURANT); } catch {}
+        try { document.cookie = "ghost_admin_auth=; path=/; max-age=0; SameSite=Strict"; } catch {}
+      }
+      // SIGNED_IN / TOKEN_REFRESHED — update session silently, don't re-fetch restaurant
+      if (s && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
+        const mapped: AuthSession = {
+          access_token:  s.access_token,
+          refresh_token: s.refresh_token ?? "",
+          expires_in:    s.expires_in    ?? 3600,
+          user: { id: s.user.id, email: s.user.email ?? "" },
+        };
+        setSession(mapped);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<string | null> => {
     const { session: s, error } = await signIn(email, password);
     if (error || !s) return error ?? "Login failed";
 
-    const rest = await fetchRestaurantByOwner(s.user.id);
-
     setSession(s);
-    setRestaurant(rest);
 
-    try {
-      localStorage.setItem(SESSION_KEY, JSON.stringify(s));
-      if (rest) localStorage.setItem(RESTAURANT_KEY, JSON.stringify(rest));
-      // Set lightweight cookie so middleware can protect /admin without the JWT
-      document.cookie = "ghost_admin_auth=1; path=/; max-age=86400; SameSite=Strict";
-    } catch {}
+    // Fetch restaurant — don't block the login response on this
+    fetchRestaurantByOwner(s.user.id).then((rest) => {
+      setRestaurant(rest);
+      try { if (rest) localStorage.setItem(LS.RESTAURANT, JSON.stringify(rest)); } catch {}
+    });
+
+    // Set cookie for middleware edge protection
+    try { document.cookie = "ghost_admin_auth=1; path=/; max-age=86400; SameSite=Strict"; } catch {}
 
     return null; // null = success
   }, []);
@@ -92,8 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setRestaurant(null);
     try {
-      localStorage.removeItem(SESSION_KEY);
-      localStorage.removeItem(RESTAURANT_KEY);
+      localStorage.removeItem(LS.RESTAURANT);
       document.cookie = "ghost_admin_auth=; path=/; max-age=0; SameSite=Strict";
     } catch {}
   }, []);
