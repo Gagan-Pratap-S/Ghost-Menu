@@ -1,27 +1,36 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
 
 export const metadata: Metadata = {
-  title: "Ghost Menu - Smart Restaurant QR System",
-  description: "Smart QR-based restaurant menu system. Fast, responsive, mobile-first.",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+  title: "Ghost Menu",
+  description: "Smart QR-based restaurant menu system.",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#f97316",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="scroll-smooth">
       <head>
         <meta charSet="utf-8" />
-        <meta name="theme-color" content="#f97316" />
+        {/* Preconnect to image CDNs to reduce first-image load time */}
+        <link rel="preconnect" href="https://images.unsplash.com" />
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        {/* Preconnect to Supabase if configured */}
+        {process.env.NEXT_PUBLIC_SUPABASE_URL && (
+          <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
+        )}
       </head>
-      <body className="bg-white text-stone-900 min-h-screen antialiased font-sans">
-        <div className="mx-auto max-w-md">
+      <body className="bg-stone-50 text-stone-900 min-h-screen antialiased">
+        <AuthProvider>
           {children}
-        </div>
+        </AuthProvider>
       </body>
     </html>
   );

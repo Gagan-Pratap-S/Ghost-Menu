@@ -1,109 +1,351 @@
-// Supabase client wrapper
-// Falls back gracefully if env vars are not set (dev mode uses local data)
+// ─── Ghost Menu — Supabase layer ─────────────────────────────────────────────
+// Auth:  @supabase/supabase-js official client (handles refresh, persistence)
+// Data:  raw REST fetch (small bundle, full control, easy to unit-test)
+// RT:    @supabase/supabase-js Realtime channel for live orders
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-export const isSupabaseConfigured = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
+const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL  ?? "";
+const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 
-// Generic REST fetch helper
-async function supabaseFetch(
-  path: string,
-  options: RequestInit = {}
-): Promise<Response> {
-  return fetch(`${SUPABASE_URL}/rest/v1${path}`, {
-    ...options,
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-      "Content-Type": "application/json",
-      Prefer: "return=representation",
-      ...(options.headers ?? {}),
+export const isSupabaseConfigured = !!(SUPABASE_URL && SUPABASE_ANON);
+
+// ─── Official Supabase client (auth + realtime only) ─────────────────────────
+function makeClient(): SupabaseClient {
+  if (!isSupabaseConfigured) {
+    return createClient("https://placeholder.supabase.co", "placeholder-key", {
+      auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    });
+  }
+  return createClient(SUPABASE_URL, SUPABASE_ANON, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
+      storageKey: "ghostMenuSupabaseSession",
     },
   });
 }
 
-// Fetch all menu items
-export async function fetchMenuItems() {
+export const supabaseClient = makeClient();
+
+// ─── Internal session type ────────────────────────────────────────────────────
+export interface AuthSession {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  user: { id: string; email: string };
+}
+
+function mapSession(s: import("@supabase/supabase-js").Session | null): AuthSession | null {
+  if (!s) return null;
+  return {
+    access_token:  s.access_token,
+    refresh_token: s.refresh_token ?? "",
+    expires_in:    s.expires_in    ?? 3600,
+    user: { id: s.user.id, email: s.user.email ?? "" },
+  };
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
+export async function signIn(
+  email: string,
+  password: string
+): Promise<{ session: AuthSession | null; error: string | null }> {
+  if (!isSupabaseConfigured) return { session: null, error: "Supabase not configured" };
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error || !data.session) return { session: null, error: error?.message ?? "Login failed" };
+  return { session: mapSession(data.session), error: null };
+}
+
+export async function signOut(): Promise<void> {
+  await supabaseClient.auth.signOut();
+}
+
+export async function getStoredSession(): Promise<AuthSession | null> {
+  const { data } = await supabaseClient.auth.getSession();
+  return mapSession(data.session);
+}
+
+// ─── REST headers ─────────────────────────────────────────────────────────────
+async function authHeaders(): Promise<Record<string, string>> {
+  const { data } = await supabaseClient.auth.getSession();
+  const token = data.session?.access_token ?? SUPABASE_ANON;
+  return {
+    apikey:         SUPABASE_ANON,
+    Authorization:  `Bearer ${token}`,
+    "Content-Type": "application/json",
+    Prefer:         "return=representation",
+  };
+}
+
+function publicHeaders(): Record<string, string> {
+  return {
+    apikey:         SUPABASE_ANON,
+    Authorization:  `Bearer ${SUPABASE_ANON}`,
+    "Content-Type": "application/json",
+    Prefer:         "return=representation",
+  };
+}
+
+// ─── RESTAURANT ───────────────────────────────────────────────────────────────
+export interface Restaurant {
+  id: string;
+  name: string;
+  slug: string;
+  owner_id: string;
+  kitchen_busy?: boolean;   // persisted kitchen status
+}
+
+export async function fetchRestaurantBySlug(slug: string): Promise<Restaurant | null> {
   if (!isSupabaseConfigured) return null;
   try {
-    const res = await supabaseFetch("/menu_items?order=id.asc");
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/restaurants?slug=eq.${encodeURIComponent(slug)}&limit=1`,
+      { headers: publicHeaders() }
+    );
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return rows[0] ?? null;
+  } catch { return null; }
+}
+
+export async function fetchRestaurantByOwner(ownerId: string): Promise<Restaurant | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const h = await authHeaders();
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/restaurants?owner_id=eq.${encodeURIComponent(ownerId)}&limit=1`,
+      { headers: h }
+    );
+    if (!res.ok) return null;
+    const rows = await res.json();
+    return rows[0] ?? null;
+  } catch { return null; }
+}
+
+export async function updateKitchenStatus(restaurantId: string, busy: boolean): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const h = await authHeaders();
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/restaurants?id=eq.${encodeURIComponent(restaurantId)}`,
+      { method: "PATCH", headers: h, body: JSON.stringify({ kitchen_busy: busy }) }
+    );
+    return res.ok;
+  } catch { return false; }
+}
+
+// ─── MENU ITEMS ───────────────────────────────────────────────────────────────
+import type { MenuItem } from "@/data/menuData";
+
+const DB_COLUMNS = new Set([
+  "name","price","category","image","description",
+  "available","featured","prep_time","profit_tag",
+  "restaurant_id","clicks","views",
+]);
+
+function sanitize(data: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(data).filter(([k]) => DB_COLUMNS.has(k)));
+}
+
+export async function fetchMenuItems(restaurantId?: string): Promise<MenuItem[] | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const filter = restaurantId ? `&restaurant_id=eq.${encodeURIComponent(restaurantId)}` : "";
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/menu_items?order=id.asc${filter}`,
+      { headers: publicHeaders() }
+    );
     if (!res.ok) return null;
     return res.json();
-  } catch {
+  } catch { return null; }
+}
+
+export async function createMenuItem(
+  data: Omit<MenuItem, "id" | "clicks" | "views" | "tag">,
+  restaurantId: string
+): Promise<MenuItem | null> {
+  if (!isSupabaseConfigured) return null;
+  try {
+    const h = await authHeaders();
+    const payload = sanitize({ ...data, clicks: 0, views: 0, restaurant_id: restaurantId } as Record<string, unknown>);
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/menu_items`, {
+      method: "POST", headers: h, body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      console.error("[ghost-menu] createMenuItem failed", res.status);
+      return null;
+    }
+    const rows = await res.json();
+    return Array.isArray(rows) ? rows[0] : rows;
+  } catch (e) {
+    console.error("[ghost-menu] createMenuItem error", e);
     return null;
   }
 }
 
-// Increment click count via RPC
-export async function incrementClick(itemId: number) {
-  if (!isSupabaseConfigured) return;
+export async function updateMenuItem(
+  id: number, restaurantId: string,
+  data: Partial<Omit<MenuItem, "id" | "clicks" | "views" | "tag">>
+): Promise<MenuItem | null> {
+  if (!isSupabaseConfigured) return null;
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_click`, {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ item_id: itemId }),
-    });
-  } catch {
-    // silent fail — local state already updated
+    const h = await authHeaders();
+    const payload = sanitize(data as Record<string, unknown>);
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/menu_items?id=eq.${id}&restaurant_id=eq.${encodeURIComponent(restaurantId)}`,
+      { method: "PATCH", headers: h, body: JSON.stringify(payload) }
+    );
+    if (!res.ok) {
+      console.error("[ghost-menu] updateMenuItem failed", res.status);
+      return null;
+    }
+    const rows = await res.json();
+    return Array.isArray(rows) ? rows[0] : rows;
+  } catch (e) {
+    console.error("[ghost-menu] updateMenuItem error", e);
+    return null;
   }
 }
 
-// Increment view count via RPC
-export async function incrementView(itemId: number) {
-  if (!isSupabaseConfigured) return;
+export async function deleteMenuItem(id: number, restaurantId: string): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_view`, {
+    const h = await authHeaders();
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/menu_items?id=eq.${id}&restaurant_id=eq.${encodeURIComponent(restaurantId)}`,
+      { method: "DELETE", headers: h }
+    );
+    return res.ok;
+  } catch { return false; }
+}
+
+// ─── ORDERS ───────────────────────────────────────────────────────────────────
+export type OrderStatus = "pending" | "preparing" | "ready" | "served" | "cancelled";
+
+export interface OrderItem { id: number; name: string; price: number; quantity: number; }
+
+export interface Order {
+  id?: string;
+  restaurant_id: string;
+  guest_name: string;
+  member_count: number;
+  table_number: string;
+  items: OrderItem[];
+  total: number;
+  status: OrderStatus;
+  created_at?: string;
+}
+
+export interface CreateOrderInput {
+  restaurant_id: string;
+  guest_name: string;
+  member_count: number;
+  table_number: string;
+  items: OrderItem[];
+  total: number;
+}
+
+export async function createOrder(input: CreateOrderInput): Promise<{ order: Order | null; error: string | null }> {
+  if (!input.restaurant_id) return { order: null, error: "No restaurant selected" };
+  if (!input.items.length)   return { order: null, error: "Cart is empty" };
+  if (input.total <= 0)      return { order: null, error: "Invalid order total" };
+
+  if (!isSupabaseConfigured) return { order: null, error: "Supabase not configured — cannot place order" };
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
       method: "POST",
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ item_id: itemId }),
+      headers: publicHeaders(),
+      body: JSON.stringify({ ...input, status: "pending" }),
     });
-  } catch {
-    // silent fail
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      return { order: null, error: body?.message ?? `Server error ${res.status}` };
+    }
+    const rows = await res.json();
+    const order: Order = Array.isArray(rows) ? rows[0] : rows;
+    return { order, error: null };
+  } catch (e) {
+    return { order: null, error: e instanceof Error ? e.message : "Network error" };
   }
 }
 
-// SQL to set up Supabase (run once in Supabase SQL editor):
-export const SETUP_SQL = `
--- Create menu_items table
-CREATE TABLE IF NOT EXISTS menu_items (
-  id          SERIAL PRIMARY KEY,
-  name        TEXT NOT NULL,
-  price       INTEGER NOT NULL,
-  category    TEXT NOT NULL,
-  image       TEXT NOT NULL,
-  description TEXT NOT NULL DEFAULT '',
-  available   BOOLEAN NOT NULL DEFAULT true,
-  featured    BOOLEAN NOT NULL DEFAULT false,
-  prep_time   TEXT NOT NULL DEFAULT 'medium' CHECK (prep_time IN ('fast','medium','slow')),
-  profit_tag  TEXT NOT NULL DEFAULT 'medium' CHECK (profit_tag IN ('low','medium','high')),
-  clicks      INTEGER NOT NULL DEFAULT 0,
-  views       INTEGER NOT NULL DEFAULT 0
-);
+// Cursor-based pagination: pass cursor = last order's created_at for next page
+export async function fetchOrders(
+  restaurantId: string,
+  cursor?: string
+): Promise<Order[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const h = await authHeaders();
+    const cursorFilter = cursor ? `&created_at=lt.${encodeURIComponent(cursor)}` : "";
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/orders?restaurant_id=eq.${encodeURIComponent(restaurantId)}&order=created_at.desc&limit=50${cursorFilter}`,
+      { headers: h }
+    );
+    if (!res.ok) return [];
+    return res.json();
+  } catch { return []; }
+}
 
--- Enable RLS (Row Level Security)
-ALTER TABLE menu_items ENABLE ROW LEVEL SECURITY;
+export async function updateOrderStatus(id: string, status: OrderStatus): Promise<boolean> {
+  if (!isSupabaseConfigured) return false;
+  try {
+    const h = await authHeaders();
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/orders?id=eq.${id}`, {
+      method: "PATCH", headers: h, body: JSON.stringify({ status }),
+    });
+    return res.ok;
+  } catch { return false; }
+}
 
--- Allow anyone to read
-CREATE POLICY "Public read" ON menu_items FOR SELECT USING (true);
+// ─── REALTIME — live order subscription ──────────────────────────────────────
+export function subscribeToOrders(
+  restaurantId: string,
+  onInsert: (order: Order) => void,
+  onUpdate: (order: Order) => void
+): () => void {
+  if (!isSupabaseConfigured) return () => {};
 
--- Increment click function
-CREATE OR REPLACE FUNCTION increment_click(item_id INT)
-RETURNS VOID AS $$
-  UPDATE menu_items SET clicks = clicks + 1 WHERE id = item_id;
-$$ LANGUAGE sql SECURITY DEFINER;
+  const channel = supabaseClient
+    .channel(`orders:${restaurantId}`)
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` },
+      (payload) => onInsert(payload.new as Order)
+    )
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "orders", filter: `restaurant_id=eq.${restaurantId}` },
+      (payload) => onUpdate(payload.new as Order)
+    )
+    .subscribe();
 
--- Increment view function
-CREATE OR REPLACE FUNCTION increment_view(item_id INT)
-RETURNS VOID AS $$
-  UPDATE menu_items SET views = views + 1 WHERE id = item_id;
-$$ LANGUAGE sql SECURITY DEFINER;
-`;
+  return () => { supabaseClient.removeChannel(channel); };
+}
+
+// ─── TRACKING ─────────────────────────────────────────────────────────────────
+// Only increment click on tap — views are tracked via IntersectionObserver in ItemCard
+async function rpc(fn: string, body: object) {
+  if (!isSupabaseConfigured) return;
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON,
+        Authorization: `Bearer ${SUPABASE_ANON}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {}
+}
+
+export const incrementClick = (itemId: number, restaurantId?: string) =>
+  rpc("increment_click", { item_id: itemId, rest_id: restaurantId ?? null });
+
+// incrementView is called by IntersectionObserver in ItemCard, NOT on click
+export const incrementView  = (itemId: number, restaurantId?: string) =>
+  rpc("increment_view",  { item_id: itemId, rest_id: restaurantId ?? null });

@@ -1,85 +1,77 @@
-# Ghost Menu — Production-Ready
+# Ghost Menu v8
 
-A live, data-driven restaurant menu decision engine built with **Next.js 16 + Tailwind CSS + Supabase**.
+Smart QR-based restaurant menu system built with Next.js 15, Supabase, and Tailwind CSS.
 
-## Features
+## What's new in v8
 
-- ⚡ **Quick Picks** — fast, popular, high-value items shown instantly
-- 🔥 **Most Ordered** — top 4 category-diverse picks
-- 🧠 **Smart Rule Engine** — scoring by clicks, profit, time-of-day, kitchen mode
-- 📊 **Admin Dashboard** — top performers, low conversion alerts, promote suggestions
-- 🎯 **Combo System** — contextual upsell suggestions in item modal
-- 📦 **Supabase backend** — real-time click/view tracking with graceful local fallback
-- 💾 **LocalStorage cache** — 5-min cache to avoid redundant fetches
-- 📱 **Mobile-first** — fully responsive, no desktop-only layouts
+### Bug fixes
+- **Click/view double-counting fixed** — views are now tracked via `IntersectionObserver` when cards enter the viewport (impressions), not on tap. Clicks are only counted on tap-to-open. CTR is now accurate.
+- **Update rollback** — failed `updateMenuItem` calls now roll back to the previous item state instead of leaving stale optimistic data.
+- **Dead code removed** — `usePersonalization.ts` (duplicate with hardcoded localStorage key) deleted.
+- **Scroll lock hot-reload leak fixed** — lock count now uses `WeakMap` keyed on `document.body` instead of a module-level integer.
+- **eslint suppression removed** — `handleItemClick` dep array fixed using a `useRef` for `restaurantId`.
+
+### Security improvements
+- **Real middleware** — `src/middleware.ts` validates the `ghost_admin_auth` cookie at the edge. Admin routes are no longer client-side-only protected.
+- **Image domain allowlist** — `next.config.ts` catch-all `"**"` hostname removed. Only Unsplash, Supabase, Cloudinary, imgix, and S3 are trusted. `ItemForm` validates URLs against the same list.
+- **QR canonical URL** — QR page now uses `NEXT_PUBLIC_APP_URL` env variable. Falls back to `window.location.origin` with a visual warning.
+
+### Performance
+- `loading="lazy"` and `placeholder="empty"` on below-fold images
+- `font-display: optional` on Google Fonts import — eliminates FOUT
+- `preconnect` / `dns-prefetch` hints to Unsplash and Supabase in `layout.tsx`
+- `CategoryFilter` wrapped in `React.memo` — no re-renders on search input changes
+- `will-change: transform` and `backface-visibility: hidden` on animated elements
+
+### UI & feel
+- **Spring animations** — modals use `cubic-bezier(0.34, 1.56, 0.64, 1)` (overshoot → snap)
+- **Cart badge pop** — scale animation re-triggers on every item added
+- **Sticky full-width cart bar** — replaces floating pill button; shows item count + total + table
+- **Prep time badges** — `~5 min`, `~15 min`, `~25 min` shown on every item card
+- **Time-contextual section header** — "For You" section shows "Morning picks", "Lunch specials", etc.
+- **Haptic feedback** — `navigator.vibrate(12)` on cart add, `[30,10,30]` on order success (Android)
+- **Reduced motion** — `@media (prefers-reduced-motion: reduce)` disables all animations
+
+### Admin improvements
+- **Kitchen toggle always visible** in the sticky header across all three tabs
+- **Kitchen status persisted to DB** — `kitchen_busy` column in `restaurants` table; survives page refresh
+- **Live elapsed time on orders** — updates every 30s; color-coded: gray → amber (5m) → red+pulse (10m+)
+- **Audio chime on new order** — Web Audio API, no external file
+- **Tab title flash** — `★ New Order!` flashes until the window is focused
+- **Cursor-based pagination** — orders fetched 50 at a time with "Load older orders" button; no more hard `limit=100`
+- **Quick availability toggle** in the Top Performers list (one-tap "86 it")
+- **Live image preview in ItemForm** — updates 500ms after URL input with error state
+- **`formatPrice()` utility** — centralised `₹` formatting throughout
+
+### Recommendation engine
+- **Cart history signal** — items previously added to cart get a `+12` score boost on return visits
+- **CTR-based scoring** — uses `clicks/views` ratio now that views are accurate
+- **Weather-aware scoring** — extend `useRuleEngine.ts` `calculateScore` to call Open-Meteo API
 
 ## Setup
 
-### 1. Install dependencies
-
-```bash
-npm install
-```
-
-### 2. Configure Supabase (optional but recommended)
-
-1. Create a project at [supabase.com](https://supabase.com)
-2. Run `SUPABASE_SETUP.sql` in your Supabase SQL Editor
-3. Copy `.env.local.example` to `.env.local` and fill in your keys
-
 ```bash
 cp .env.local.example .env.local
-```
+# Fill in NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
+# Optionally set NEXT_PUBLIC_APP_URL to your production domain
 
-The app **works without Supabase** — it falls back to the rich local dataset automatically.
-
-### 3. Run
-
-```bash
+npm install
 npm run dev
 ```
 
-## Architecture
+Run `SUPABASE_SETUP.sql` in your Supabase SQL editor to create tables and RPC functions.
 
+## Environment variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Your Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Your Supabase anon key |
+| `NEXT_PUBLIC_APP_URL` | Recommended | Your production domain (e.g. `https://ghostmenu.vercel.app`) — used for QR code generation |
+
+## Deploy
+
+```bash
+npx vercel
+# Set env vars in Vercel dashboard → Project → Settings → Environment Variables
 ```
-src/
-├── app/
-│   └── page.tsx           # Root: Supabase hydration, state, click/view tracking
-├── components/
-│   ├── MenuPage.tsx        # Customer view: Quick Picks → Most Ordered → Full Menu
-│   ├── ItemCard.tsx        # Card variants: quick | grid | list
-│   ├── ItemModal.tsx       # Detail modal with combo suggestions
-│   ├── CategoryFilter.tsx  # Horizontal category pills
-│   └── OwnerDashboard.tsx  # Admin: stats, insights, availability toggles
-├── data/
-│   └── menuData.ts         # 26-item dataset + combo suggestions map
-├── hooks/
-│   ├── useMenuEngine.ts    # topPicks / quickPicks / fullMenu computation
-│   └── useRuleEngine.ts    # Scoring + customer tags + admin quality indicators
-└── lib/
-    └── supabase.ts         # Supabase REST client (no npm package needed)
-```
-
-## Supabase Schema
-
-See `SUPABASE_SETUP.sql` for the full setup including:
-- `menu_items` table with all columns
-- Row Level Security (public read)
-- `increment_click(item_id)` RPC function
-- `increment_view(item_id)` RPC function
-- Full data seed INSERT
-
-## Rule Engine Scoring
-
-| Signal | Weight |
-|---|---|
-| clicks (normalised 0–30) | Primary |
-| profit_tag = high | +12 |
-| featured | +6 |
-| category = Combos | +10 |
-| time-of-day match | +10 |
-| kitchen busy + fast item | +15 |
-| kitchen busy + slow item | −15 |
-| recently viewed (personalization) | +4 |
-| new item (< 30 interactions) | +6 |
-| high views + CTR < 8% (decay) | −10 |
