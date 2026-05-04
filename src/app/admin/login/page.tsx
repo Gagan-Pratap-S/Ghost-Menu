@@ -14,13 +14,11 @@ function LoginForm() {
   const [error, setError]       = useState("");
   const [busy, setBusy]         = useState(false);
   const [showPass, setShowPass] = useState(false);
-  const submitting               = useRef(false); // prevent double-submit
+  const submitting               = useRef(false);
 
-  // Redirect if already authenticated (after auth resolves)
   useEffect(() => {
     if (!loading && session) {
-      const next = searchParams.get("next") ?? "/admin";
-      router.replace(next);
+      router.replace(searchParams.get("next") ?? "/admin");
     }
   }, [session, loading, router, searchParams]);
 
@@ -30,94 +28,75 @@ function LoginForm() {
     submitting.current = true;
     setBusy(true);
     setError("");
-
     const err = await login(email.trim(), password);
-
     if (err) {
       setError(err);
       setBusy(false);
       submitting.current = false;
-      // Don't redirect — stay on login page to show error
     }
-    // On success: useEffect above handles the redirect once session state updates
-    // (busy stays true while redirect happens — no flash back to form)
+    // On success, useEffect above handles redirect
   };
 
-  // Show spinner while auth check runs on mount
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-stone-900 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  // Don't render form if already logged in (redirect is happening)
-  if (session) return null;
+  if (loading) return (
+    <div className="min-h-screen atmospheric-bg flex items-center justify-center">
+      <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-stone-900 flex items-center justify-center px-5">
-      <div className="w-full max-w-sm animate-slideUp">
+    <div className="min-h-screen atmospheric-bg flex items-center justify-center px-5 overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full" style={{ background: "radial-gradient(circle, rgba(249,115,22,0.06) 0%, transparent 70%)" }} />
+      </div>
+
+      <div className="relative z-10 w-full max-w-sm animate-slideUp">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-orange-500 rounded-2xl mb-3 shadow-lg shadow-orange-500/30">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-3"
+            style={{ background: "linear-gradient(135deg, #f97316 0%, #ea580c 100%)", boxShadow: "0 8px 24px rgba(249,115,22,0.3)" }}
+          >
             <span className="text-2xl">🍽️</span>
           </div>
-          <h1 className="font-display text-2xl font-bold text-white">Admin Login</h1>
-          <p className="text-stone-500 text-sm mt-1">Ghost Menu · Restaurant Portal</p>
+          <h1 className="font-display font-extrabold text-2xl text-white tracking-tight">Admin Login</h1>
+          <p className="text-slate-500 text-sm mt-1">Ghost Menu · Restaurant Portal</p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="bg-stone-800/70 backdrop-blur-md border border-stone-700/60 rounded-3xl p-6 space-y-4 shadow-2xl"
-        >
+        <form onSubmit={handleSubmit} className="glass-premium rounded-3xl p-6 space-y-4">
           <div>
-            <label className="text-xs font-semibold text-stone-400 block mb-1.5">Email</label>
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5 tracking-wide uppercase">Email</label>
             <input
-              type="email"
-              placeholder="you@restaurant.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              disabled={busy}
-              className="w-full bg-stone-700/60 border border-stone-600/60 text-white placeholder-stone-600 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500/70 focus:bg-stone-700 transition-all disabled:opacity-50"
+              type="email" value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="you@restaurant.com" required autoComplete="email"
+              className="w-full rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none transition-all"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+              onFocus={e => { e.target.style.border = "1px solid rgba(249,115,22,0.5)"; }}
+              onBlur={e => { e.target.style.border = "1px solid rgba(255,255,255,0.08)"; }}
             />
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-stone-400 block mb-1.5">Password</label>
+            <label className="block text-xs font-semibold text-slate-500 mb-1.5 tracking-wide uppercase">Password</label>
             <div className="relative">
               <input
-                type={showPass ? "text" : "password"}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-                disabled={busy}
-                className="w-full bg-stone-700/60 border border-stone-600/60 text-white placeholder-stone-600 rounded-2xl px-4 py-3 pr-11 text-sm focus:outline-none focus:border-orange-500/70 focus:bg-stone-700 transition-all disabled:opacity-50"
+                type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••" required autoComplete="current-password"
+                className="w-full rounded-2xl px-4 py-3 pr-16 text-sm text-white placeholder-slate-600 focus:outline-none transition-all"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                onFocus={e => { e.target.style.border = "1px solid rgba(249,115,22,0.5)"; }}
+                onBlur={e => { e.target.style.border = "1px solid rgba(255,255,255,0.08)"; }}
               />
-              <button
-                type="button"
-                onClick={() => setShowPass(v => !v)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300 text-xs font-medium"
-              >
-                {showPass ? "Hide" : "Show"}
-              </button>
+              <button type="button" onClick={() => setShowPass(v => !v)}
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs font-semibold transition-colors"
+              >{showPass ? "Hide" : "Show"}</button>
             </div>
           </div>
 
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">
+            <div className="rounded-xl px-4 py-2.5" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
               <p className="text-red-400 text-xs">{error}</p>
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={busy || !email || !password}
-            className="w-full bg-orange-500 hover:bg-orange-400 active:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-display font-bold rounded-2xl py-3.5 text-sm transition-all shadow-lg shadow-orange-500/20"
-          >
+          <button type="submit" disabled={busy || !email || !password} className="btn-primary w-full py-3.5 text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
             {busy ? (
               <span className="flex items-center justify-center gap-2">
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -127,8 +106,8 @@ function LoginForm() {
           </button>
         </form>
 
-        <p className="text-center text-stone-700 text-xs mt-5">
-          <a href="/" className="hover:text-stone-500 transition-colors">← Back to menu</a>
+        <p className="text-center text-slate-700 text-xs mt-5">
+          <a href="/" className="hover:text-slate-500 transition-colors">← Back to menu</a>
         </p>
       </div>
     </div>
@@ -136,13 +115,5 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-stone-900 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    }>
-      <LoginForm />
-    </Suspense>
-  );
+  return <Suspense fallback={null}><LoginForm /></Suspense>;
 }

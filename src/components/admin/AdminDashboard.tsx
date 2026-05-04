@@ -1,7 +1,6 @@
 "use client";
 
 import { FALLBACK_IMAGE } from "@/lib/constants";
-
 import { useState, useMemo } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -23,26 +22,35 @@ interface Props {
 
 type Tab = "overview" | "items" | "orders";
 
-function StatCard({ value, label, sub, color = "text-orange-500" }: { value: string; label: string; sub?: string; color?: string }) {
+// ─── Reusable primitives ──────────────────────────────────────────────────────
+const glass     = { background: "rgba(15,23,42,0.6)", border: "1px solid rgba(255,255,255,0.06)" };
+const glassHard = { background: "rgba(15,23,42,0.8)", border: "1px solid rgba(255,255,255,0.08)" };
+const divider   = { borderColor: "rgba(255,255,255,0.05)" };
+
+function StatCard({ value, label, sub, color = "#f97316" }: { value: string; label: string; sub?: string; color?: string }) {
   return (
-    <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm">
-      <p className={`font-display text-2xl font-bold ${color}`}>{value}</p>
-      <p className="text-xs font-semibold text-stone-700 mt-0.5">{label}</p>
-      {sub && <p className="text-xs text-stone-400 mt-0.5">{sub}</p>}
+    <div className="rounded-2xl p-4" style={glass}>
+      <p className="font-display text-2xl font-extrabold tabular-nums" style={{ color }}>{value}</p>
+      <p className="text-xs font-semibold text-white mt-0.5">{label}</p>
+      {sub && <p className="text-xs text-slate-600 mt-0.5">{sub}</p>}
     </div>
   );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <h2 className="font-display text-xs font-bold text-slate-600 uppercase tracking-widest mb-2">{children}</h2>;
 }
 
 export default function AdminDashboard({ items, loading, restaurant, onAdd, onUpdate, onDelete }: Props) {
   const router = useRouter();
   const { logout, session } = useAuth();
 
-  const [tab, setTab]                     = useState<Tab>("overview");
-  const [searchTerm, setSearchTerm]       = useState("");
-  const [kitchenStatus, setKitchenStatus] = useState<"normal" | "busy">("normal");
-  const [editingItem, setEditingItem]     = useState<MenuItem | null>(null);
-  const [showAddForm, setShowAddForm]     = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [tab, setTab]                       = useState<Tab>("overview");
+  const [searchTerm, setSearchTerm]         = useState("");
+  const [kitchenStatus, setKitchenStatus]   = useState<"normal" | "busy">("normal");
+  const [editingItem, setEditingItem]       = useState<MenuItem | null>(null);
+  const [showAddForm, setShowAddForm]       = useState(false);
+  const [deleteConfirm, setDeleteConfirm]   = useState<number | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const { getQualityIndicators } = useRuleEngine();
@@ -52,7 +60,6 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
   const totalClicks = useMemo(() => items.reduce((s, i) => s + i.clicks, 0), [items]);
   const avgCTR      = useMemo(() => totalViews > 0 ? ((totalClicks / totalViews) * 100).toFixed(1) : "0", [totalViews, totalClicks]);
   const available   = useMemo(() => items.filter(i => i.available).length, [items]);
-
   const topPerformers  = useMemo(() => [...items].sort((a, b) => b.clicks - a.clicks).slice(0, 5), [items]);
   const needsAttention = useMemo(() => items.filter(i => i.views > 100 && i.clicks / i.views < 0.15), [items]);
   const promoteItems   = useMemo(() => items.filter(i => i.profit_tag === "high" && i.views < 50), [items]);
@@ -60,126 +67,134 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
   const filteredItems = useMemo(() => {
     if (!searchTerm.trim()) return items;
     const t = searchTerm.toLowerCase();
-    return items.filter(i =>
-      i.name.toLowerCase().includes(t) ||
-      i.category.toLowerCase().includes(t) ||
-      i.description.toLowerCase().includes(t)
-    );
+    return items.filter(i => i.name.toLowerCase().includes(t) || i.category.toLowerCase().includes(t));
   }, [items, searchTerm]);
 
-  const handleUpdate = async (id: number, data: Partial<MenuItem>) => {
-    await onUpdate(id, data);
-    setEditingItem(null);
-  };
+  const handleUpdate = async (id: number, data: Partial<MenuItem>) => { await onUpdate(id, data); setEditingItem(null); };
+  const handleAdd    = async (data: Omit<MenuItem, "id" | "clicks" | "views" | "tag">) => { await onAdd(data); setShowAddForm(false); };
+  const handleLogout = async () => { await logout(); router.replace("/admin/login"); };
 
-  const handleAdd = async (data: Omit<MenuItem, "id" | "clicks" | "views" | "tag">) => {
-    await onAdd(data);
-    setShowAddForm(false);
-  };
-
-  const handleLogout = async () => {
-    await logout();
-    router.replace("/admin/login");
-  };
+  const tabConfig = [
+    { key: "overview" as Tab, label: "Overview",         icon: "📊" },
+    { key: "items"    as Tab, label: `Menu (${items.length})`, icon: "🍽️" },
+    { key: "orders"   as Tab, label: "Orders",            icon: "📋" },
+  ];
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-screen" style={{ background: "var(--color-bg)" }}>
+      {/* Atmospheric glow */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-32 right-0 w-96 h-96 rounded-full" style={{ background: "radial-gradient(circle, rgba(249,115,22,0.04) 0%, transparent 70%)" }} />
+      </div>
+
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-white border-b border-stone-100 shadow-sm">
+      <header className="sticky top-0 z-30" style={{ background: "rgba(2,6,23,0.9)", backdropFilter: "blur(24px)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="font-display text-lg font-bold text-stone-900">
-                {restaurant?.name ?? "Admin"}
-              </h1>
-              <p className="text-xs text-stone-400">{session?.user.email}</p>
+              <h1 className="font-display font-extrabold text-lg text-white tracking-tight">{restaurant?.name ?? "Admin"}</h1>
+              <p className="text-xs text-slate-600">{session?.user.email}</p>
             </div>
             <div className="flex items-center gap-2">
-              <a
-                href={`/menu/${restaurant?.slug ?? "cafe-delight"}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-xl text-xs font-semibold text-stone-600 transition-colors"
+              <a href={`/menu/${restaurant?.slug ?? "cafe-delight"}`} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
               >
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>
                 Preview
               </a>
-              <button
-                onClick={() => setShowLogoutConfirm(true)}
-                className="px-2.5 py-1.5 bg-red-50 hover:bg-red-100 border border-red-100 rounded-xl text-xs font-semibold text-red-500 transition-colors"
+              <a href="/admin/qr"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
               >
-                Sign out
-              </button>
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M3 3h7v7H3zm2 2v3h3V5zm8-2h7v7h-7zm2 2v3h3V5zM3 13h7v7H3zm2 2v3h3v-3zm11-2h2v2h-2zm2 2h2v2h-2zm-2 2h2v2h-2zm2 2h2v2h-2z"/>
+                </svg>
+                QR
+              </a>
+              <button onClick={() => setShowLogoutConfirm(true)}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors"
+                style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.15)", color: "#f87171" }}
+              >Sign out</button>
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-1 mt-3 bg-stone-100 rounded-xl p-1">
-            {(["overview", "items", "orders"] as Tab[]).map(t => (
-              <button key={t} onClick={() => setTab(t)}
-                className={`flex-1 py-1.5 text-xs font-semibold rounded-lg capitalize transition-all ${
-                  tab === t ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-700"
-                }`}
+          {/* Tab bar */}
+          <div className="flex gap-1 mt-3 rounded-xl p-1" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}>
+            {tabConfig.map(t => (
+              <button key={t.key} onClick={() => setTab(t.key)}
+                className="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all capitalize flex items-center justify-center gap-1"
+                style={tab === t.key
+                  ? { background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.08)" }
+                  : { color: "#64748b" }
+                }
               >
-                {t === "overview" ? "📊 Overview" : t === "items" ? `🍽️ Menu (${items.length})` : "📋 Orders"}
+                <span>{t.icon}</span>
+                <span className="hidden xs:inline">{t.label}</span>
               </button>
             ))}
           </div>
         </div>
       </header>
 
-      <div className="max-w-md mx-auto px-4 py-4">
+      <div className="max-w-md mx-auto px-4 py-4 relative z-10">
         {loading ? (
           <div className="space-y-3">
-            {[0,1,2,3].map(i => <div key={i} className="h-20 bg-white rounded-2xl border border-stone-100 animate-pulse" />)}
+            {[0,1,2,3].map(i => <div key={i} className="h-20 rounded-2xl animate-pulse" style={glass} />)}
           </div>
         ) : tab === "overview" ? (
+          /* ─── Overview ─── */
           <div className="space-y-4 animate-fadeIn">
             {/* Kitchen mode */}
-            <div className="bg-white rounded-2xl p-4 border border-stone-100 shadow-sm flex items-center justify-between">
+            <div className="rounded-2xl p-4 flex items-center justify-between" style={glass}>
               <div>
-                <p className="font-display font-bold text-sm text-stone-900">Kitchen Mode</p>
-                <p className={`text-xs mt-0.5 ${kitchenStatus === "normal" ? "text-emerald-600" : "text-red-500"}`}>
+                <p className="font-display font-bold text-sm text-white">Kitchen Mode</p>
+                <p className="text-xs mt-0.5" style={{ color: kitchenStatus === "normal" ? "#4ade80" : "#f87171" }}>
                   {kitchenStatus === "normal" ? "✅ All orders accepted" : "🔴 Busy — fast items prioritised"}
                 </p>
               </div>
-              <button
-                onClick={() => setKitchenStatus(s => s === "normal" ? "busy" : "normal")}
-                className={`relative w-12 h-6 rounded-full transition-colors ${kitchenStatus === "normal" ? "bg-emerald-500" : "bg-red-400"}`}
+              <button onClick={() => setKitchenStatus(s => s === "normal" ? "busy" : "normal")}
+                className="relative w-12 h-6 rounded-full transition-colors"
+                style={{ background: kitchenStatus === "normal" ? "#22c55e" : "#ef4444", boxShadow: kitchenStatus === "normal" ? "0 0 12px rgba(34,197,94,0.3)" : "none" }}
               >
-                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${kitchenStatus === "normal" ? "left-6" : "left-0.5"}`} />
+                <span className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all"
+                  style={{ left: kitchenStatus === "normal" ? "calc(100% - 22px)" : "2px" }} />
               </button>
             </div>
 
-            {/* Stats */}
+            {/* Stats grid */}
             <div className="grid grid-cols-2 gap-3">
               <StatCard value={totalViews.toLocaleString()} label="Total Views" sub="all items" />
-              <StatCard value={totalClicks.toLocaleString()} label="Total Clicks" color="text-blue-500" sub="all items" />
-              <StatCard value={`${avgCTR}%`} label="Avg CTR" color="text-emerald-600" sub="clicks / views" />
-              <StatCard value={`${available}/${items.length}`} label="Available" color="text-violet-500" sub="menu items" />
+              <StatCard value={totalClicks.toLocaleString()} label="Total Clicks" color="#60a5fa" sub="all items" />
+              <StatCard value={`${avgCTR}%`} label="Avg CTR" color="#4ade80" sub="clicks / views" />
+              <StatCard value={`${available}/${items.length}`} label="Available" color="#c084fc" sub="menu items" />
             </div>
 
-            {/* Top Performers */}
+            {/* Top performers */}
             <div>
-              <h2 className="font-display text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">🏆 Top Performers</h2>
-              <div className="bg-white rounded-2xl border border-stone-100 shadow-sm overflow-hidden divide-y divide-stone-50">
+              <SectionLabel>🏆 Top Performers</SectionLabel>
+              <div className="rounded-2xl overflow-hidden" style={glass}>
                 {topPerformers.map((item, idx) => (
-                  <div key={item.id} className="flex items-center gap-3 px-4 py-2.5">
-                    <span className="text-xs font-bold text-stone-300 w-4 flex-shrink-0">#{idx + 1}</span>
-                    <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-stone-100 flex-shrink-0">
+                  <div key={item.id} className="flex items-center gap-3 px-4 py-2.5" style={{ borderBottom: idx < topPerformers.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                    <span className="text-xs font-bold text-slate-700 w-4 flex-shrink-0">#{idx + 1}</span>
+                    <div className="relative w-8 h-8 rounded-lg overflow-hidden flex-shrink-0" style={{ background: "rgba(30,41,59,0.8)" }}>
                       <Image src={item.image} alt={item.name} fill sizes="32px" className="object-cover"
-                        onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
+                        onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-stone-900 truncate">{item.name}</p>
-                      <p className="text-xs text-stone-400">{item.clicks} clicks · {item.views} views</p>
+                      <p className="text-xs font-semibold text-white truncate">{item.name}</p>
+                      <p className="text-xs text-slate-600">{item.clicks}c · {item.views}v</p>
                     </div>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${
-                      item.profit_tag === "high" ? "bg-emerald-100 text-emerald-700" :
-                      item.profit_tag === "medium" ? "bg-yellow-100 text-yellow-700" : "bg-stone-100 text-stone-500"
-                    }`}>{item.profit_tag}</span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                      style={item.profit_tag === "high"
+                        ? { background: "rgba(34,197,94,0.1)", color: "#4ade80", border: "1px solid rgba(34,197,94,0.2)" }
+                        : item.profit_tag === "medium"
+                          ? { background: "rgba(234,179,8,0.1)", color: "#fbbf24", border: "1px solid rgba(234,179,8,0.2)" }
+                          : { background: "rgba(100,116,139,0.1)", color: "#94a3b8", border: "1px solid rgba(100,116,139,0.2)" }
+                      }
+                    >{item.profit_tag}</span>
                   </div>
                 ))}
               </div>
@@ -187,13 +202,13 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
 
             {needsAttention.length > 0 && (
               <div>
-                <h2 className="font-display text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">⚠️ Needs Attention</h2>
-                <div className="bg-amber-50 rounded-2xl border border-amber-100 p-4 space-y-2">
-                  <p className="text-xs text-amber-700 font-medium">High views, low clicks — update image or name</p>
+                <SectionLabel>⚠️ Needs Attention</SectionLabel>
+                <div className="rounded-2xl p-4 space-y-2" style={{ background: "rgba(234,179,8,0.05)", border: "1px solid rgba(234,179,8,0.12)" }}>
+                  <p className="text-xs text-yellow-600 font-medium">High views, low clicks — update image or name</p>
                   {needsAttention.slice(0, 4).map(item => (
                     <div key={item.id} className="flex justify-between text-xs">
-                      <span className="font-medium text-amber-900 truncate flex-1 mr-2">{item.name}</span>
-                      <span className="text-amber-600 whitespace-nowrap">{item.views}v / {item.clicks}c</span>
+                      <span className="font-medium text-yellow-200/70 truncate flex-1 mr-2">{item.name}</span>
+                      <span className="text-yellow-600 whitespace-nowrap">{item.views}v / {item.clicks}c</span>
                     </div>
                   ))}
                 </div>
@@ -202,13 +217,13 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
 
             {promoteItems.length > 0 && (
               <div>
-                <h2 className="font-display text-xs font-bold text-stone-500 uppercase tracking-wider mb-2">📈 Promote These</h2>
-                <div className="bg-emerald-50 rounded-2xl border border-emerald-100 p-4 space-y-2">
-                  <p className="text-xs text-emerald-700 font-medium">High-profit, low visibility — feature them</p>
+                <SectionLabel>📈 Promote These</SectionLabel>
+                <div className="rounded-2xl p-4 space-y-2" style={{ background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.12)" }}>
+                  <p className="text-xs text-emerald-600 font-medium">High-profit, low visibility — feature them</p>
                   {promoteItems.slice(0, 4).map(item => (
                     <div key={item.id} className="flex justify-between text-xs">
-                      <span className="font-medium text-emerald-900 truncate flex-1 mr-2">{item.name}</span>
-                      <span className="text-emerald-600">₹{item.price}</span>
+                      <span className="font-medium text-emerald-200/70 truncate flex-1 mr-2">{item.name}</span>
+                      <span className="text-emerald-600 tabular-nums">₹{item.price}</span>
                     </div>
                   ))}
                 </div>
@@ -216,73 +231,57 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
             )}
           </div>
         ) : tab === "items" ? (
-          /* ─── Items Tab ─── */
+          /* ─── Items ─── */
           <div className="space-y-3 animate-fadeIn">
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <input
-                  type="text"
-                  placeholder="Search items..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-white border border-stone-200 rounded-xl px-3 py-2.5 pl-8 text-sm text-stone-900 placeholder-stone-400 focus:outline-none focus:border-orange-400 transition-colors"
+                <input type="text" placeholder="Search items…" value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                  className="w-full rounded-xl px-3 py-2.5 pl-8 text-sm text-white placeholder-slate-600 focus:outline-none transition-all"
+                  style={glassHard}
+                  onFocus={e => { e.target.style.border = "1px solid rgba(249,115,22,0.4)"; }}
+                  onBlur={e => { e.target.style.border = "1px solid rgba(255,255,255,0.08)"; }}
                 />
-                <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                {searchTerm && (
-                  <button onClick={() => setSearchTerm("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 text-base">×</button>
-                )}
+                {searchTerm && <button onClick={() => setSearchTerm("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-600 hover:text-slate-300 text-base">×</button>}
               </div>
-              <button
-                onClick={() => { setShowAddForm(true); setEditingItem(null); }}
-                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white text-xs font-bold rounded-xl transition-colors shadow-sm whitespace-nowrap"
+              <button onClick={() => { setShowAddForm(true); setEditingItem(null); }}
+                className="btn-primary px-4 py-2.5 text-xs whitespace-nowrap flex items-center gap-1.5"
               >
                 <span className="text-sm leading-none">+</span> Add Dish
               </button>
             </div>
 
-            {searchTerm && (
-              <p className="text-xs text-stone-400">{filteredItems.length} result{filteredItems.length !== 1 ? "s" : ""}</p>
-            )}
+            {searchTerm && <p className="text-xs text-slate-600">{filteredItems.length} result{filteredItems.length !== 1 ? "s" : ""}</p>}
 
-            {showAddForm && (
-              <ItemForm mode="add" onSave={handleAdd} onCancel={() => setShowAddForm(false)} />
-            )}
+            {showAddForm && <ItemForm mode="add" onSave={handleAdd} onCancel={() => setShowAddForm(false)} />}
 
             {filteredItems.map(item => (
               <div key={item.id}>
                 {editingItem?.id === item.id ? (
-                  <ItemForm
-                    mode="edit"
-                    item={editingItem}
-                    onSave={(data) => handleUpdate(item.id, data)}
-                    onCancel={() => setEditingItem(null)}
-                  />
+                  <ItemForm mode="edit" item={editingItem} onSave={data => handleUpdate(item.id, data)} onCancel={() => setEditingItem(null)} />
                 ) : (
-                  <AdminItemRow
-                    item={item}
-                    indicator={indicators[item.id]}
+                  <AdminItemRow item={item} indicator={indicators[item.id]}
                     onEdit={() => setEditingItem(item)}
                     onToggleAvailable={() => onUpdate(item.id, { available: !item.available })}
                     onToggleFeatured={() => onUpdate(item.id, { featured: !item.featured })}
                     onDelete={() => setDeleteConfirm(item.id)}
                   />
                 )}
-
                 {deleteConfirm === item.id && (
-                  <div className="mt-2 bg-red-50 border border-red-200 rounded-2xl p-4 animate-slideUp">
-                    <p className="text-sm font-semibold text-red-800 mb-1">Delete "{item.name}"?</p>
-                    <p className="text-xs text-red-500 mb-3">This cannot be undone.</p>
+                  <div className="mt-2 rounded-2xl p-4 animate-slideUp" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                    <p className="text-sm font-semibold text-white mb-1">Delete "{item.name}"?</p>
+                    <p className="text-xs text-red-400 mb-3">This cannot be undone.</p>
                     <div className="flex gap-2">
                       <button onClick={() => setDeleteConfirm(null)}
-                        className="flex-1 py-2 bg-white border border-stone-200 rounded-xl text-xs font-semibold text-stone-600 hover:bg-stone-50">
-                        Cancel
-                      </button>
+                        className="flex-1 py-2 rounded-xl text-xs font-semibold text-slate-400 transition-colors"
+                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                      >Cancel</button>
                       <button onClick={async () => { await onDelete(item.id); setDeleteConfirm(null); }}
-                        className="flex-1 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-bold transition-colors">
-                        Delete
-                      </button>
+                        className="flex-1 py-2 rounded-xl text-xs font-bold text-white transition-colors"
+                        style={{ background: "#ef4444" }}
+                      >Delete</button>
                     </div>
                   </div>
                 )}
@@ -292,39 +291,39 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
             {filteredItems.length === 0 && !showAddForm && (
               <div className="text-center py-16">
                 <p className="text-3xl mb-2">🔍</p>
-                <p className="font-display font-semibold text-stone-600">No items found</p>
+                <p className="font-display font-semibold text-white">No items found</p>
               </div>
             )}
           </div>
         ) : (
-          /* ─── Orders Tab ─── */
-          restaurant?.id ? (
-            <OrdersTab restaurantId={restaurant.id} />
-          ) : (
-            <div className="text-center py-16">
-              <p className="text-3xl mb-2">📋</p>
-              <p className="font-display font-semibold text-stone-600">Connect Supabase to view orders</p>
-            </div>
-          )
+          /* ─── Orders ─── */
+          restaurant?.id
+            ? <OrdersTab restaurantId={restaurant.id} />
+            : (
+              <div className="text-center py-16">
+                <p className="text-3xl mb-2">📋</p>
+                <p className="font-display font-semibold text-white">Connect Supabase to view orders</p>
+              </div>
+            )
         )}
       </div>
 
       {/* Logout confirm */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-5">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowLogoutConfirm(false)} />
-          <div className="relative bg-white rounded-3xl p-6 w-full max-w-xs shadow-2xl animate-slideUp">
-            <p className="font-display font-bold text-stone-900 mb-1">Sign out?</p>
-            <p className="text-xs text-stone-500 mb-4">You'll need to sign in again to access the admin panel.</p>
+          <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }} onClick={() => setShowLogoutConfirm(false)} />
+          <div className="relative rounded-3xl p-6 w-full max-w-xs shadow-2xl animate-slideUp" style={{ background: "var(--color-surface)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <p className="font-display font-bold text-white mb-1">Sign out?</p>
+            <p className="text-xs text-slate-500 mb-4">You'll need to sign in again to access the admin panel.</p>
             <div className="flex gap-2">
               <button onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-xs font-semibold transition-colors">
-                Cancel
-              </button>
+                className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-slate-400 transition-colors"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+              >Cancel</button>
               <button onClick={handleLogout}
-                className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-bold transition-colors">
-                Sign Out
-              </button>
+                className="flex-1 py-2.5 rounded-xl text-xs font-bold text-white transition-colors"
+                style={{ background: "#ef4444" }}
+              >Sign Out</button>
             </div>
           </div>
         </div>
@@ -333,9 +332,8 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
   );
 }
 
-function AdminItemRow({
-  item, indicator, onEdit, onToggleAvailable, onToggleFeatured, onDelete
-}: {
+// ─── Admin Item Row ────────────────────────────────────────────────────────────
+function AdminItemRow({ item, indicator, onEdit, onToggleAvailable, onToggleFeatured, onDelete }: {
   item: MenuItem;
   indicator: { label: string; suggestion: string } | null;
   onEdit: () => void;
@@ -344,44 +342,52 @@ function AdminItemRow({
   onDelete: () => void;
 }) {
   return (
-    <div className={`bg-white rounded-2xl border shadow-sm p-3 transition-opacity ${!item.available ? "opacity-50" : ""} border-stone-100`}>
+    <div className={`rounded-2xl p-3 transition-opacity ${!item.available ? "opacity-50" : ""}`}
+      style={{ background: "rgba(15,23,42,0.6)", border: "1px solid rgba(255,255,255,0.06)" }}
+    >
       <div className="flex gap-3 mb-2.5">
-        <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-stone-100 flex-shrink-0">
+        <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0" style={{ background: "rgba(30,41,59,0.8)" }}>
           <Image src={item.image} alt={item.name} fill sizes="48px" className="object-cover"
-            onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
+            onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-display font-bold text-sm text-stone-900 truncate">{item.name}</p>
-          <p className="text-xs text-stone-400">₹{item.price} · {item.category}</p>
-          <p className="text-xs text-stone-400">{item.views}v · {item.clicks}c</p>
+          <p className="font-display font-bold text-sm text-white truncate tracking-tight">{item.name}</p>
+          <p className="text-xs text-slate-600 price tabular-nums">₹{item.price} · {item.category}</p>
+          <p className="text-xs text-slate-700">{item.views}v · {item.clicks}c</p>
         </div>
         {indicator && (
-          <span className="text-[10px] font-semibold text-stone-500 bg-stone-50 border border-stone-100 rounded-lg px-1.5 py-1 self-start text-right leading-tight max-w-[72px]">
-            {indicator.label}
-          </span>
+          <span className="text-[10px] font-semibold text-slate-500 rounded-lg px-1.5 py-1 self-start text-right leading-tight max-w-[72px] flex-shrink-0"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+          >{indicator.label}</span>
         )}
       </div>
       <div className="grid grid-cols-4 gap-1.5">
-        <button onClick={onEdit}
-          className="py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-xs font-semibold transition-colors">
-          ✏️ Edit
-        </button>
+        {[
+          { label: "✏️ Edit",  onClick: onEdit,            active: false,       activeStyle: "", inactiveStyle: "rgba(255,255,255,0.05)" },
+        ].map(btn => (
+          <button key={btn.label} onClick={btn.onClick}
+            className="py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white transition-colors"
+            style={{ background: btn.inactiveStyle, border: "1px solid rgba(255,255,255,0.06)" }}
+          >{btn.label}</button>
+        ))}
         <button onClick={onToggleAvailable}
-          className={`py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-            item.available ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" : "bg-red-100 text-red-600 hover:bg-red-200"
-          }`}>
-          {item.available ? "✓ Avail" : "✗ Sold"}
-        </button>
+          className="py-1.5 rounded-xl text-xs font-semibold transition-colors"
+          style={item.available
+            ? { background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", color: "#4ade80" }
+            : { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }
+          }
+        >{item.available ? "✓ Avail" : "✗ Sold"}</button>
         <button onClick={onToggleFeatured}
-          className={`py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-            item.featured ? "bg-amber-100 text-amber-700 hover:bg-amber-200" : "bg-stone-100 text-stone-500 hover:bg-stone-200"
-          }`}>
-          {item.featured ? "⭐ Feat" : "Feature"}
-        </button>
+          className="py-1.5 rounded-xl text-xs font-semibold transition-colors"
+          style={item.featured
+            ? { background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)", color: "#fbbf24" }
+            : { background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", color: "#64748b" }
+          }
+        >{item.featured ? "⭐ Feat" : "Feature"}</button>
         <button onClick={onDelete}
-          className="py-1.5 bg-red-50 hover:bg-red-100 text-red-500 rounded-xl text-xs font-semibold transition-colors">
-          🗑
-        </button>
+          className="py-1.5 rounded-xl text-xs font-semibold transition-colors"
+          style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.15)", color: "#f87171" }}
+        >🗑</button>
       </div>
     </div>
   );

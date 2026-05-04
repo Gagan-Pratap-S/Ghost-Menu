@@ -19,36 +19,26 @@ interface Props {
   onItemClick: (item: MenuItem) => void;
 }
 
-function SkeletonQuick() {
+function SkeletonCard({ h }: { h: string }) {
   return (
-    <div className="flex-shrink-0 w-36 bg-white rounded-2xl overflow-hidden border border-stone-100 animate-pulse">
-      <div className="h-24 bg-stone-200" />
-      <div className="p-2.5 space-y-1.5">
-        <div className="h-2.5 bg-stone-200 rounded w-3/4" />
-        <div className="h-2.5 bg-stone-200 rounded w-1/3" />
-      </div>
-    </div>
-  );
-}
-function SkeletonGrid() {
-  return (
-    <div className="bg-white rounded-2xl overflow-hidden border border-stone-100 animate-pulse">
-      <div className="h-28 bg-stone-200" />
+    <div className="rounded-2xl overflow-hidden animate-pulse flex-shrink-0" style={{ background: "rgba(30,41,59,0.5)", border: "1px solid rgba(255,255,255,0.05)" }}>
+      <div className={`${h} w-full`} style={{ background: "rgba(255,255,255,0.04)" }} />
       <div className="p-3 space-y-2">
-        <div className="h-2.5 bg-stone-200 rounded w-3/4" />
-        <div className="h-2.5 bg-stone-200 rounded w-1/3" />
+        <div className="h-2.5 rounded w-3/4" style={{ background: "rgba(255,255,255,0.06)" }} />
+        <div className="h-2 rounded w-1/3" style={{ background: "rgba(255,255,255,0.04)" }} />
       </div>
     </div>
   );
 }
+
 function SkeletonList() {
   return (
-    <div className="flex gap-3 bg-white rounded-2xl p-3 border border-stone-100 animate-pulse">
-      <div className="w-16 h-16 rounded-xl bg-stone-200 flex-shrink-0" />
+    <div className="flex gap-3 rounded-2xl p-3 animate-pulse" style={{ background: "rgba(30,41,59,0.5)", border: "1px solid rgba(255,255,255,0.05)" }}>
+      <div className="w-16 h-16 rounded-xl flex-shrink-0" style={{ background: "rgba(255,255,255,0.04)" }} />
       <div className="flex-1 space-y-2 py-1">
-        <div className="h-2.5 bg-stone-200 rounded w-2/3" />
-        <div className="h-2 bg-stone-200 rounded w-full" />
-        <div className="h-2 bg-stone-200 rounded w-1/4" />
+        <div className="h-2.5 rounded w-2/3" style={{ background: "rgba(255,255,255,0.06)" }} />
+        <div className="h-2 rounded w-full" style={{ background: "rgba(255,255,255,0.04)" }} />
+        <div className="h-2 rounded w-1/4" style={{ background: "rgba(255,255,255,0.04)" }} />
       </div>
     </div>
   );
@@ -60,9 +50,7 @@ export default function MenuPage({ items, loading, kitchenStatus, guestName, mem
   const [activeCategory, setActiveCategory] = useState("All");
   const { trackView } = usePersonalizationTracker();
 
-  const { topPicks, quickPicks, fullMenu, categories } = useMenuEngine(
-    items, kitchenStatus, activeCategory, searchTerm
-  );
+  const { topPicks, quickPicks, fullMenu, categories } = useMenuEngine(items, kitchenStatus, activeCategory, searchTerm);
 
   const handleItemClick = useCallback((item: MenuItem) => {
     trackView(item.id);
@@ -73,37 +61,39 @@ export default function MenuPage({ items, loading, kitchenStatus, guestName, mem
 
   const hour = new Date().getHours();
   const timeGreet = hour < 12 ? "☀️" : hour < 17 ? "👋" : "🌙";
-  const tableLabel = tableNumber && tableNumber !== "QR" ? ` · Table ${tableNumber}` : ` · Table for ${memberCount}`;
-  const greeting = guestName
-    ? `Hi ${guestName} ${timeGreet}${tableLabel}`
-    : `${hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"} ${timeGreet}`;
+  const tableLabel = tableNumber && tableNumber !== "QR" ? ` · Table ${tableNumber}` : ` · ${memberCount} guests`;
+  const greeting = guestName ? `Hi ${guestName} ${timeGreet}${tableLabel}` : `${hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening"} ${timeGreet}`;
 
   return (
-    <div className="min-h-screen pb-28 bg-stone-50">
+    <div className="min-h-screen pb-32" style={{ background: "var(--color-bg)" }}>
       {/* Sticky header */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-stone-100 shadow-sm">
+      <header className="sticky top-0 z-30" style={{ background: "rgba(2,6,23,0.85)", backdropFilter: "blur(24px)", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-2">
             <div className="min-w-0">
-              <h1 className="font-display text-lg font-bold text-stone-900 tracking-tight truncate">{restaurantName}</h1>
-              <p className="text-xs text-stone-400 mt-0.5 truncate">{greeting}</p>
+              <h1 className="font-display font-extrabold text-lg text-white tracking-tight truncate">{restaurantName}</h1>
+              <p className="text-xs text-slate-500 mt-0.5 truncate">{greeting}</p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <button
-                onClick={() => setSearchOpen(v => !v)}
-                className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${
-                  searchOpen ? "bg-orange-100 text-orange-600" : "bg-stone-100 text-stone-500 hover:bg-stone-200"
-                }`}
-                aria-label="Search"
+              <button onClick={() => setSearchOpen(v => !v)} aria-label="Search"
+                className="w-9 h-9 flex items-center justify-center rounded-full transition-all active:scale-90"
+                style={{
+                  background: searchOpen ? "rgba(249,115,22,0.15)" : "rgba(255,255,255,0.05)",
+                  border: "1px solid " + (searchOpen ? "rgba(249,115,22,0.3)" : "rgba(255,255,255,0.06)"),
+                  color: searchOpen ? "#f97316" : "#94a3b8"
+                }}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </button>
-              <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
-                kitchenStatus === "normal" ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
-              }`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${kitchenStatus === "normal" ? "bg-emerald-500" : "bg-red-500 animate-pulse"}`} />
+              <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                style={kitchenStatus === "normal"
+                  ? { background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", color: "#4ade80" }
+                  : { background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }
+                }
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${kitchenStatus === "normal" ? "bg-green-400" : "bg-red-400 animate-pulse"}`} />
                 {kitchenStatus === "normal" ? "Open" : "Busy"}
               </span>
             </div>
@@ -111,20 +101,17 @@ export default function MenuPage({ items, loading, kitchenStatus, guestName, mem
 
           {searchOpen && (
             <div className="relative mt-2.5 animate-slideUp">
-              <input
-                autoFocus
-                type="text"
-                placeholder="Search dishes, categories..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-stone-100 border border-stone-200 text-stone-900 placeholder-stone-400 rounded-xl px-4 py-2.5 pl-9 text-sm focus:outline-none focus:border-orange-400 focus:bg-white transition-all"
+              <input autoFocus type="text" placeholder="Search dishes, categories…"
+                value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                className="w-full rounded-xl px-4 py-2.5 pl-9 text-sm text-white placeholder-slate-600 focus:outline-none transition-all"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}
+                onFocus={e => { e.target.style.border = "1px solid rgba(249,115,22,0.4)"; }}
+                onBlur={e => { e.target.style.border = "1px solid rgba(255,255,255,0.08)"; }}
               />
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-              {searchTerm && (
-                <button onClick={() => setSearchTerm("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 text-base leading-none">×</button>
-              )}
+              {searchTerm && <button onClick={() => setSearchTerm("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-base">×</button>}
             </div>
           )}
         </div>
@@ -132,18 +119,17 @@ export default function MenuPage({ items, loading, kitchenStatus, guestName, mem
 
       {loading ? (
         <div className="max-w-md mx-auto px-4 py-5 space-y-6">
-          <div className="flex gap-3 overflow-hidden">{[0,1,2,3].map(i => <SkeletonQuick key={i} />)}</div>
-          <div className="grid grid-cols-2 gap-3">{[0,1,2,3].map(i => <SkeletonGrid key={i} />)}</div>
+          <div className="flex gap-3 overflow-hidden">{[0,1,2,3].map(i => <div key={i} className="flex-shrink-0 w-36"><SkeletonCard h="h-24" /></div>)}</div>
+          <div className="grid grid-cols-2 gap-3">{[0,1,2,3].map(i => <SkeletonCard key={i} h="h-28" />)}</div>
           <div className="space-y-2.5">{[0,1,2,3,4].map(i => <SkeletonList key={i} />)}</div>
         </div>
       ) : (
         <div className="max-w-md mx-auto">
-          {/* ⚡ Quick Picks */}
           {quickPicks.length > 0 && showSections && (
-            <section className="pt-5">
+            <section className="pt-6">
               <div className="flex items-center justify-between px-4 mb-3">
-                <h2 className="font-display text-sm font-bold text-stone-900">⚡ Quick Picks</h2>
-                <span className="text-xs text-stone-400">Fast · Popular</span>
+                <h2 className="font-display font-bold text-sm text-white">⚡ Quick Picks</h2>
+                <span className="text-xs text-slate-600">Fast · Popular</span>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-1 px-4 snap-x scrollbar-none">
                 {quickPicks.map((item, i) => (
@@ -153,10 +139,9 @@ export default function MenuPage({ items, loading, kitchenStatus, guestName, mem
             </section>
           )}
 
-          {/* 🔥 Most Ordered */}
           {topPicks.length > 0 && showSections && (
-            <section className="pt-5 px-4">
-              <h2 className="font-display text-sm font-bold text-stone-900 mb-3">🔥 Most Ordered</h2>
+            <section className="pt-6 px-4">
+              <h2 className="font-display font-bold text-sm text-white mb-3">🔥 Most Ordered</h2>
               <div className="grid grid-cols-2 gap-3">
                 {topPicks.map((item, i) => (
                   <ItemCard key={item.id} item={item} onClick={() => handleItemClick(item)} variant="grid" priority={i < 2} />
@@ -165,34 +150,30 @@ export default function MenuPage({ items, loading, kitchenStatus, guestName, mem
             </section>
           )}
 
-          {/* Category filter */}
-          <div className="sticky top-[56px] z-20 mt-5 bg-stone-50">
-            <CategoryFilter
-              categories={categories}
-              activeCategory={activeCategory}
-              onCategoryChange={(c) => { setActiveCategory(c); setSearchTerm(""); setSearchOpen(false); }}
+          <div className="sticky mt-5" style={{ top: "56px", zIndex: 20, background: "rgba(2,6,23,0.9)", backdropFilter: "blur(12px)" }}>
+            <CategoryFilter categories={categories} activeCategory={activeCategory}
+              onCategoryChange={c => { setActiveCategory(c); setSearchTerm(""); setSearchOpen(false); }}
             />
           </div>
 
-          {/* Full menu */}
           <section className="px-4 pt-4 pb-10">
             {fullMenu.length === 0 ? (
               <div className="text-center py-20">
                 <p className="text-4xl mb-3">🔍</p>
-                <p className="font-display font-semibold text-stone-700">Nothing found</p>
-                <p className="text-xs text-stone-400 mt-1">Try a different search or category</p>
+                <p className="font-display font-semibold text-white">Nothing found</p>
+                <p className="text-xs text-slate-500 mt-1">Try a different search or category</p>
               </div>
             ) : (
               <>
                 <div className="flex items-center justify-between mb-3">
-                  <h2 className="font-display text-sm font-bold text-stone-900">
-                    {activeCategory === "All" ? "All Items" : activeCategory}
-                  </h2>
-                  <span className="text-xs text-stone-400">{fullMenu.length} items</span>
+                  <h2 className="font-display font-bold text-sm text-white">{activeCategory === "All" ? "All Items" : activeCategory}</h2>
+                  <span className="text-xs text-slate-600">{fullMenu.length} items</span>
                 </div>
                 <div className="space-y-2.5">
                   {fullMenu.map((item, i) => (
-                    <ItemCard key={item.id} item={item} onClick={() => handleItemClick(item)} variant="list" priority={i < 3 && showSections} />
+                    <div key={item.id} className="animate-item">
+                      <ItemCard item={item} onClick={() => handleItemClick(item)} variant="list" priority={i < 3 && showSections} />
+                    </div>
                   ))}
                 </div>
               </>
@@ -201,7 +182,6 @@ export default function MenuPage({ items, loading, kitchenStatus, guestName, mem
         </div>
       )}
 
-      {/* Floating cart button — only renders when cart has items */}
       <CartButton restaurantId={restaurantId} guestName={guestName} memberCount={memberCount} tableNumber={tableNumber} />
     </div>
   );

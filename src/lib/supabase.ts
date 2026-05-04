@@ -230,16 +230,23 @@ export async function createOrder(input: CreateOrderInput): Promise<{ order: Ord
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/orders`, {
       method: "POST",
-      headers: publicHeaders(),
+      headers: {
+        // Use return=minimal so Supabase does NOT attempt to SELECT the row
+        // back after INSERT. The SELECT policy restricts to authenticated owners,
+        // so "return=representation" (which triggers a SELECT) would fail for anon.
+        apikey:         SUPABASE_ANON,
+        Authorization:  `Bearer ${SUPABASE_ANON}`,
+        "Content-Type": "application/json",
+        Prefer:         "return=minimal",
+      },
       body: JSON.stringify({ ...input, status: "pending" }),
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      return { order: null, error: body?.message ?? `Server error ${res.status}` };
+      return { order: null, error: body?.message ?? body?.hint ?? `Server error ${res.status}` };
     }
-    const rows = await res.json();
-    const order: Order = Array.isArray(rows) ? rows[0] : rows;
-    return { order, error: null };
+    // With return=minimal the body is empty — generate a client-side placeholder id
+    return { order: { ...input, status: "pending", id: crypto.randomUUID() }, error: null };
   } catch (e) {
     return { order: null, error: e instanceof Error ? e.message : "Network error" };
   }

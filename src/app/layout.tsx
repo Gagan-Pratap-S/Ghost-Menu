@@ -11,16 +11,13 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#f97316",
+  themeColor: "#020617",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="scroll-smooth">
-      <head>
-        <meta charSet="utf-8" />
-      </head>
-      <body className="bg-stone-50 text-stone-900 min-h-screen antialiased">
+    <html lang="en">
+      <body>
         <AuthProvider>
           {children}
         </AuthProvider>
