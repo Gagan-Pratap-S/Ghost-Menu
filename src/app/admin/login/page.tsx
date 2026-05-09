@@ -46,7 +46,7 @@ function LoginForm() {
     <div style={{ minHeight: "100vh", background: "var(--gm-bg)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 20px" }}>
       <div className="animate-slideUp" style={{ width: "100%", maxWidth: 380 }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 14, background: "var(--gm-primary)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 24, marginBottom: 16, boxShadow: "0 4px 16px rgba(223,88,48,0.25)" }}>🍽️</div>
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: "var(--gm-primary)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 24, marginBottom: 16, boxShadow: "0 6px 20px rgba(255,122,0,0.28)" }}>🍽️</div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: "var(--gm-text)", margin: 0, letterSpacing: "-0.02em" }}>Admin Login</h1>
           <p style={{ fontSize: 14, color: "var(--gm-text-secondary)", marginTop: 4 }}>Ghost Menu · Restaurant Portal</p>
         </div>
@@ -73,7 +73,7 @@ function LoginForm() {
             </div>
 
             {error && (
-              <div style={{ background: "var(--gm-danger-bg)", border: "1px solid var(--gm-danger-border)", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "var(--gm-danger)" }}>
+              <div style={{ background: "var(--gm-danger-bg)", border: "1px solid var(--gm-danger-border)", borderRadius: "var(--gm-radius-sm)", padding: "12px 16px", fontSize: 13, color: "var(--gm-danger)" }}>
                 {error}
               </div>
             )}

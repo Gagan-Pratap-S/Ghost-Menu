@@ -57,7 +57,7 @@ export default function ItemModal({ item, onClose, onComboItemClick, restaurantI
         </button>
 
         {/* Image */}
-        <div style={{ position: "relative", height: 210, background: "var(--gm-bg)", borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: "hidden" }}>
+        <div style={{ position: "relative", height: 210, background: "var(--gm-bg)", borderTopLeftRadius: "var(--gm-radius-xl)", borderTopRightRadius: "var(--gm-radius-xl)", overflow: "hidden" }}>
           <Image src={item.image} alt={item.name} fill sizes="448px" className="object-cover" priority
             onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 50%)" }} />
@@ -96,7 +96,7 @@ export default function ItemModal({ item, onClose, onComboItemClick, restaurantI
 
           {/* Combo suggestions */}
           {comboItems.length > 0 && (
-            <div style={{ marginBottom: 20, background: "#FFF7ED", border: "1px solid #FDBA74", borderRadius: 16, padding: 16 }}>
+            <div style={{ marginBottom: 20, background: "#FFF7ED", border: "1px solid rgba(255,122,0,0.25)", borderRadius: "var(--gm-radius-md)", padding: 16 }}>
               <p style={{ fontSize: 14, fontWeight: 600, color: "#C2410C", marginBottom: 4 }}>🎯 Make it a combo</p>
               <p style={{ fontSize: 13, color: "#92400E", marginBottom: 12 }}>Pairs perfectly with:</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
@@ -117,16 +117,16 @@ export default function ItemModal({ item, onClose, onComboItemClick, restaurantI
               Add to Cart · {formatPrice(item.price)}
             </button>
           ) : (
-            <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--gm-bg)", borderRadius: 16, padding: "12px 16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--gm-bg)", borderRadius: "var(--gm-radius-md)", padding: "12px 16px" }}>
               <button onClick={() => decrement(item.id)}
-                style={{ width: 40, height: 40, borderRadius: 12, border: "1px solid var(--gm-border)", background: "var(--gm-surface)", color: "var(--gm-text)", fontSize: 18, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                style={{ width: 40, height: 40, borderRadius: 50, border: "1px solid var(--gm-border)", background: "var(--gm-surface)", color: "var(--gm-text)", fontSize: 18, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
               <span style={{ flex: 1, textAlign: "center", fontSize: 15, fontWeight: 700, color: "var(--gm-text)" }} className="tabular-nums">{qty} in cart</span>
               <button onClick={() => increment(item.id)}
-                style={{ width: 40, height: 40, borderRadius: 12, border: "none", background: "var(--gm-primary)", color: "#fff", fontSize: 18, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(223,88,48,0.3)" }}>+</button>
+                style={{ width: 40, height: 40, borderRadius: 50, border: "none", background: "var(--gm-primary)", color: "#fff", fontSize: 18, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(255,122,0,0.3)" }}>+</button>
             </div>
           )}
 
-          <button onClick={onClose} style={{ width: "100%", marginTop: 12, height: 44, borderRadius: 14, border: "1px solid var(--gm-border)", background: "transparent", color: "var(--gm-text-secondary)", fontSize: 14, cursor: "pointer" }}>
+          <button onClick={onClose} style={{ width: "100%", marginTop: 12, height: 44, borderRadius: "var(--gm-radius-pill)", border: "1px solid var(--gm-border)", background: "transparent", color: "var(--gm-text-secondary)", fontSize: 14, cursor: "pointer" }}>
             Back to Menu
           </button>
         </div>

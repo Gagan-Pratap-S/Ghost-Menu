@@ -94,9 +94,9 @@ export default function QRPage() {
         }
       `}</style>
 
-      <header className="no-print" style={{ position: "sticky", top: 0, zIndex: 10, background: "var(--gm-surface)", borderBottom: "1px solid var(--gm-border)", boxShadow: "var(--gm-shadow-sm)" }}>
+      <header className="no-print" style={{ position: "sticky", top: 0, zIndex: 10, background: "rgba(255,253,249,0.94)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderBottom: "1px solid var(--gm-border)", boxShadow: "var(--gm-shadow-sm)" }}>
         <div style={{ maxWidth: 600, margin: "0 auto", padding: "12px 20px", display: "flex", alignItems: "center", gap: 12 }}>
-          <a href="/admin" style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, border: "1px solid var(--gm-border)", background: "var(--gm-bg)", color: "var(--gm-text-secondary)", textDecoration: "none", flexShrink: 0 }}>
+          <a href="/admin" style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "var(--gm-radius-sm)", border: "1px solid var(--gm-border)", background: "var(--gm-bg)", color: "var(--gm-text-secondary)", textDecoration: "none", flexShrink: 0 }}>
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
@@ -201,7 +201,7 @@ export default function QRPage() {
               "Watch live orders arrive in the Orders tab with table numbers",
             ].map((step, i) => (
               <li key={i} style={{ display: "flex", gap: 10, fontSize: 13, color: "#92400E" }}>
-                <span style={{ flexShrink: 0, width: 20, height: 20, borderRadius: "50%", background: "rgba(223,88,48,0.15)", color: "#C2410C", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>{i + 1}</span>
+                <span style={{ flexShrink: 0, width: 20, height: 20, borderRadius: "50%", background: "rgba(255,122,0,0.15)", color: "#C2410C", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>{i + 1}</span>
                 <span style={{ lineHeight: 1.5 }}>{step}</span>
               </li>
             ))}

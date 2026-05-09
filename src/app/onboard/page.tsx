@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { createRestaurant, fetchRestaurantBySlug, supabaseClient } from "@/lib/supabase";
 
 const THEME_COLORS = [
-  { name: "Orange",  value: "#DF5830" },
+  { name: "Orange",  value: "var(--gm-primary)" },
   { name: "Emerald", value: "#10b981" },
   { name: "Violet",  value: "#8b5cf6" },
   { name: "Rose",    value: "#f43f5e" },
@@ -56,8 +56,8 @@ export default function OnboardPage() {
   // remember original brand color to restore if user cancels
   const originalBrand = useRef(
     typeof document !== "undefined"
-      ? getComputedStyle(document.documentElement).getPropertyValue("--gm-primary").trim() || "#DF5830"
-      : "#DF5830"
+      ? getComputedStyle(document.documentElement).getPropertyValue("--gm-primary").trim() || "var(--gm-primary)"
+      : "var(--gm-primary)"
   );
 
   // Fix 1: Real-time brand color preview
@@ -127,7 +127,7 @@ export default function OnboardPage() {
     <div style={{ minHeight: "100vh", background: "var(--gm-bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px 20px" }}>
       <div className="animate-slideUp" style={{ width: "100%", maxWidth: 440 }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 16, background: "var(--gm-primary)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 28, marginBottom: 16, boxShadow: "0 4px 16px rgba(223,88,48,0.25)", transition: "background 0.25s" }}>🍽️</div>
+          <div style={{ width: 56, height: 56, borderRadius: 16, background: "var(--gm-primary)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 28, marginBottom: 16, boxShadow: "0 4px 16px rgba(255,122,0,0.25)", transition: "background 0.25s" }}>🍽️</div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: "var(--gm-text)", margin: 0, letterSpacing: "-0.02em" }}>Set Up Your Restaurant</h1>
           <p style={{ fontSize: 14, color: "var(--gm-text-secondary)", marginTop: 4 }}>
             Step {step} of {totalSteps} — {stepLabels[step - 1]}

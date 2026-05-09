@@ -114,7 +114,7 @@ export default function WelcomePage() {
         <div className="animate-slideUp" style={{ width: "100%", maxWidth: 380 }}>
           {/* Logo */}
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <div style={{ width: 56, height: 56, borderRadius: 16, background: "var(--gm-primary)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 28, marginBottom: 16, boxShadow: "0 4px 16px rgba(223,88,48,0.25)" }}>🍽️</div>
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: "var(--gm-primary)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 28, marginBottom: 16, boxShadow: "0 4px 16px rgba(255,122,0,0.25)" }}>🍽️</div>
             <h1 style={{ fontSize: 26, fontWeight: 700, color: "var(--gm-text)", margin: 0, letterSpacing: "-0.02em" }}>Ghost Menu</h1>
             <p style={{ fontSize: 14, color: "var(--gm-text-secondary)", marginTop: 4 }}>Scan the QR code on your table to begin</p>
           </div>

@@ -95,9 +95,9 @@ export default function AdminMenuPage() {
   return (
     <div style={{ minHeight: "100vh", background: "var(--gm-bg)" }}>
       {/* Header */}
-      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "var(--gm-surface)", borderBottom: "1px solid var(--gm-border)", boxShadow: "var(--gm-shadow-sm)" }}>
+      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "rgba(255,253,249,0.94)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderBottom: "1px solid var(--gm-border)", boxShadow: "var(--gm-shadow-sm)" }}>
         <div style={{ maxWidth: 520, margin: "0 auto", padding: "12px 20px", display: "flex", alignItems: "center", gap: 12 }}>
-          <a href="/admin" style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 10, border: "1px solid var(--gm-border)", background: "var(--gm-bg)", color: "var(--gm-text-secondary)", textDecoration: "none", flexShrink: 0 }}>
+          <a href="/admin" style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "var(--gm-radius-sm)", border: "1px solid var(--gm-border)", background: "var(--gm-bg)", color: "var(--gm-text-secondary)", textDecoration: "none", flexShrink: 0 }}>
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
@@ -179,7 +179,7 @@ export default function AdminMenuPage() {
               />
             )}
             {deleteConfirm === item.id && (
-              <div className="animate-slideUp" style={{ marginTop: 8, background: "var(--gm-danger-bg)", border: "1px solid var(--gm-danger-border)", borderRadius: 16, padding: 16 }}>
+              <div className="animate-slideUp" style={{ marginTop: 8, background: "var(--gm-danger-bg)", border: "1px solid var(--gm-danger-border)", borderRadius: "var(--gm-radius-md)", padding: 16 }}>
                 <p style={{ fontSize: 14, fontWeight: 600, color: "var(--gm-text)", marginBottom: 4 }}>Delete "{item.name}"?</p>
                 <p style={{ fontSize: 13, color: "var(--gm-danger)", marginBottom: 12 }}>This cannot be undone.</p>
                 <div style={{ display: "flex", gap: 8 }}>
@@ -266,7 +266,7 @@ function MenuItemRow({ item, indicator, onEdit, onToggleAvailable, onToggleFeatu
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
-        <button onClick={onEdit} style={{ padding: "7px 0", borderRadius: 10, border: "1px solid var(--gm-border)", background: "var(--gm-bg)", color: "var(--gm-text-secondary)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>✏️ Edit</button>
+        <button onClick={onEdit} style={{ padding: "7px 0", borderRadius: "var(--gm-radius-sm)", border: "1px solid var(--gm-border)", background: "var(--gm-bg)", color: "var(--gm-text-secondary)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>✏️ Edit</button>
         <button onClick={onToggleAvailable} style={{ padding: "7px 0", borderRadius: 10, border: "none", fontSize: 12, fontWeight: 500, cursor: "pointer", ...(item.available ? { background: "var(--gm-success-bg)", color: "#15803D" } : { background: "var(--gm-danger-bg)", color: "#B91C1C" }) }}>
           {item.available ? "✓ Avail" : "✗ Sold"}
         </button>

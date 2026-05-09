@@ -131,7 +131,7 @@ function OrdersPanel({ restaurantId, tableNumber }: { restaurantId?: string; tab
               transition: "all 0.15s",
               display: "flex", alignItems: "center", gap: 12,
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#F97316"; }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--gm-primary)"; }}
             onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#E5E7EB"; }}
           >
             {/* Status dot */}
@@ -145,7 +145,7 @@ function OrdersPanel({ restaurantId, tableNumber }: { restaurantId?: string; tab
                 <span style={{ fontSize: 13, fontWeight: 700, color: "#1A1A1A", fontFamily: "monospace" }}>
                   #{(order.id ?? "").slice(0, 8).toUpperCase()}
                 </span>
-                <span style={{ fontSize: 13, fontWeight: 700, color: "#F97316" }} className="price tabular-nums">
+                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--gm-primary)" }} className="price tabular-nums">
                   {formatPrice(order.total)}
                 </span>
               </div>

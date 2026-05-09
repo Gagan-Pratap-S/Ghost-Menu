@@ -81,11 +81,11 @@ function OrderCard({ order, isNew, onStatusChange }: OrderCardProps) {
 
   const boxShadow = urgency === "danger"
     ? "0 0 0 2px rgba(239,68,68,0.12), var(--gm-shadow-md)"
-    : isNew ? "0 0 0 2px rgba(223,88,48,0.15), var(--gm-shadow-md)"
+    : isNew ? "0 0 0 2px rgba(255,122,0,0.15), var(--gm-shadow-md)"
     : "var(--gm-shadow-md)";
 
   return (
-    <div style={{ background: "var(--gm-surface)", border: `1px solid ${borderColor}`, borderRadius: 18, padding: 16, boxShadow, transition: "all 0.2s" }}>
+    <div style={{ background: "var(--gm-surface)", border: `1px solid ${borderColor}`, borderRadius: "var(--gm-radius-md)", padding: 16, boxShadow, transition: "all 0.2s" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -113,7 +113,7 @@ function OrderCard({ order, isNew, onStatusChange }: OrderCardProps) {
         <span className={cfg.cssClass}>{cfg.label}</span>
       </div>
 
-      <div style={{ background: "var(--gm-bg)", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
+      <div style={{ background: "var(--gm-bg)", borderRadius: "var(--gm-radius-sm)", padding: "10px 12px", marginBottom: 12 }}>
         {order.items.map((item, idx) => (
           <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: idx < order.items.length - 1 ? 4 : 0 }}>
             <span style={{ color: "var(--gm-text-secondary)" }}>{item.quantity}× {item.name}</span>

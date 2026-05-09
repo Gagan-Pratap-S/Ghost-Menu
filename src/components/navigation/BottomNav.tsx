@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef } from "react";
 
-// ─── Tab configuration type ────────────────────────────────────────────────────
 export interface TabConfig {
   key: string;
   label: string;
@@ -15,7 +14,6 @@ export interface TabConfig {
 
 interface BottomNavProps {
   tabs: TabConfig[];
-  /** Adds extra padding when true so sticky header doesn't overlap */
   elevated?: boolean;
 }
 
@@ -23,14 +21,9 @@ function haptic() {
   try { navigator.vibrate?.(8); } catch {}
 }
 
-/**
- * BottomNav — Premium floating pill navigation
- * Visual: frosted card, orange active pill, safe-area aware
- */
-export default function BottomNav({ tabs, elevated }: BottomNavProps) {
+export default function BottomNav({ tabs }: BottomNavProps) {
   const navRef = useRef<HTMLDivElement>(null);
 
-  // Expose nav height to CSS for page padding
   useEffect(() => {
     const el = navRef.current;
     if (!el) return;
@@ -57,10 +50,9 @@ export default function BottomNav({ tabs, elevated }: BottomNavProps) {
         left: 0,
         right: 0,
         zIndex: 50,
-        // Safe area padding
-        paddingBottom: "max(12px, env(safe-area-inset-bottom))",
-        paddingLeft: "max(12px, env(safe-area-inset-left))",
-        paddingRight: "max(12px, env(safe-area-inset-right))",
+        paddingBottom: "max(14px, env(safe-area-inset-bottom))",
+        paddingLeft: "max(16px, env(safe-area-inset-left))",
+        paddingRight: "max(16px, env(safe-area-inset-right))",
         paddingTop: 10,
         background: "transparent",
         pointerEvents: "none",
@@ -68,30 +60,30 @@ export default function BottomNav({ tabs, elevated }: BottomNavProps) {
     >
       <div
         style={{
-          maxWidth: 520,
+          maxWidth: 480,
           margin: "0 auto",
-          background: "rgba(255,255,255,0.96)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          border: "1px solid #DFE2EC",
-          borderRadius: 28,
-          boxShadow: "0 20px 50px rgba(15,23,42,0.10), 0 4px 12px rgba(15,23,42,0.05)",
+          background: "rgba(255,253,249,0.96)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          border: "1px solid rgba(0,0,0,0.07)",
+          borderRadius: 30,
+          boxShadow: "0 10px 30px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)",
           display: "flex",
           alignItems: "center",
-          padding: "6px 8px",
-          gap: 4,
+          padding: "5px 6px",
+          gap: 2,
           pointerEvents: "all",
         }}
       >
         {tabs.map((tab) => (
-          <NavTab key={tab.key} tab={tab} />
+          <NavTab key={tab.key} tab={tab} totalTabs={tabs.length} />
         ))}
       </div>
     </nav>
   );
 }
 
-function NavTab({ tab }: { tab: TabConfig }) {
+function NavTab({ tab, totalTabs }: { tab: TabConfig; totalTabs: number }) {
   const isActive = !!tab.active;
 
   const handleClick = () => {
@@ -109,37 +101,33 @@ function NavTab({ tab }: { tab: TabConfig }) {
       style={{
         flex: 1,
         display: "flex",
-        flexDirection: "row",
+        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: 6,
-        padding: isActive ? "10px 16px" : "10px 8px",
-        borderRadius: 22,
+        gap: 3,
+        padding: "9px 8px 7px",
+        borderRadius: 24,
         border: "none",
         cursor: "pointer",
         position: "relative",
-        transition: "all 0.22s cubic-bezier(0.34,1.2,0.64,1)",
-        transform: isActive ? "scale(1.03)" : "scale(1)",
-        // Active: orange filled pill with glow
-        // Inactive: transparent
-        background: isActive
-          ? "linear-gradient(135deg, #F97316 0%, #FD5B30 100%)"
-          : "transparent",
+        transition: "all 0.25s cubic-bezier(0.34,1.2,0.64,1)",
+        background: isActive ? "var(--gm-primary)" : "transparent",
         boxShadow: isActive
-          ? "0 8px 24px rgba(249,115,22,0.30), inset 0 1px 0 rgba(255,255,255,0.20)"
+          ? "0 6px 20px rgba(255,122,0,0.28), inset 0 1px 0 rgba(255,255,255,0.20)"
           : "none",
         minWidth: 0,
         WebkitTapHighlightColor: "transparent",
         outline: "none",
+        minHeight: 56,
       }}
       onMouseDown={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.96)";
+        (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.95)";
       }}
       onMouseUp={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.transform = isActive ? "scale(1.03)" : "scale(1)";
+        (e.currentTarget as HTMLButtonElement).style.transform = isActive ? "scale(1.02)" : "scale(1)";
       }}
       onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.transform = isActive ? "scale(1.03)" : "scale(1)";
+        (e.currentTarget as HTMLButtonElement).style.transform = isActive ? "scale(1.02)" : "scale(1)";
       }}
     >
       {/* Icon */}
@@ -148,7 +136,7 @@ function NavTab({ tab }: { tab: TabConfig }) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: isActive ? "#ffffff" : "#4B5563",
+          color: isActive ? "#ffffff" : "#9C9C9C",
           fontSize: 0,
           flexShrink: 0,
           transition: "color 0.22s ease",
@@ -156,7 +144,6 @@ function NavTab({ tab }: { tab: TabConfig }) {
         }}
       >
         {tab.icon}
-        {/* Badge */}
         {tab.badge != null && tab.badge > 0 && (
           <span
             style={{
@@ -166,15 +153,15 @@ function NavTab({ tab }: { tab: TabConfig }) {
               minWidth: 16,
               height: 16,
               borderRadius: 99,
-              background: isActive ? "#ffffff" : "#F97316",
-              color: isActive ? "#F97316" : "#ffffff",
+              background: isActive ? "#ffffff" : "var(--gm-primary)",
+              color: isActive ? "var(--gm-primary)" : "#ffffff",
               fontSize: 9,
               fontWeight: 700,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               padding: "0 4px",
-              boxShadow: "0 2px 6px rgba(249,115,22,0.35)",
+              boxShadow: "0 2px 6px rgba(255,122,0,0.35)",
               fontVariantNumeric: "tabular-nums",
               lineHeight: 1,
             }}
@@ -184,18 +171,16 @@ function NavTab({ tab }: { tab: TabConfig }) {
         )}
       </span>
 
-      {/* Label — only show when active for cleaner look */}
+      {/* Label — always visible */}
       <span
         style={{
-          fontSize: 12,
-          fontWeight: 600,
-          color: isActive ? "#ffffff" : "#4B5563",
+          fontSize: 11,
+          fontWeight: isActive ? 700 : 500,
+          color: isActive ? "#ffffff" : "#9C9C9C",
           letterSpacing: "-0.01em",
           whiteSpace: "nowrap",
           transition: "all 0.22s ease",
-          maxWidth: isActive ? 80 : 0,
-          overflow: "hidden",
-          opacity: isActive ? 1 : 0,
+          lineHeight: 1,
         }}
       >
         {tab.label}

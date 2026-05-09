@@ -117,7 +117,7 @@ export default function MenuPage({
       )}
 
       {/* Sticky header */}
-      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "var(--gm-surface)", borderBottom: "1px solid var(--gm-border)", boxShadow: "var(--gm-shadow-sm)" }}>
+      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "rgba(255,253,249,0.94)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderBottom: "1px solid var(--gm-border)", boxShadow: "var(--gm-shadow-sm)" }}>
         <div style={{ maxWidth: 480, margin: "0 auto", padding: "12px 16px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
             <div style={{ minWidth: 0 }}>
@@ -142,7 +142,7 @@ export default function MenuPage({
           </div>
           {searchOpen && (
             <div style={{ position: "relative", marginTop: 10 }} className="animate-slideUp">
-              <input className="gm-input" autoFocus style={{ paddingLeft: 38, height: 42, fontSize: 14 }}
+              <input className="gm-input" autoFocus style={{ paddingLeft: 44, height: 48, fontSize: 14, borderRadius: "var(--gm-radius-input)" }}
                 placeholder="Search dishes, categories..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
               <svg style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--gm-text-tertiary)" }} width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
               {searchTerm && <button onClick={() => setSearchTerm("")} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: 18, color: "var(--gm-text-tertiary)", cursor: "pointer" }}>×</button>}

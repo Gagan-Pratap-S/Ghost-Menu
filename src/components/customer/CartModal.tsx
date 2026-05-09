@@ -90,7 +90,7 @@ export default function CartModal({ open, onClose, restaurantId, guestName, memb
       <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}
         className="animate-fadeIn" onClick={onClose} />
 
-      <div style={{ position: "relative", width: "100%", maxWidth: 480, background: "var(--gm-surface)", borderTopLeftRadius: 28, borderTopRightRadius: 28, boxShadow: "var(--gm-shadow-xl)", maxHeight: "88vh", display: "flex", flexDirection: "column" }}
+      <div style={{ position: "relative", width: "100%", maxWidth: 480, background: "var(--gm-surface)", borderTopLeftRadius: "var(--gm-radius-xl)", borderTopRightRadius: "var(--gm-radius-xl)", boxShadow: "var(--gm-shadow-xl)", maxHeight: "88vh", display: "flex", flexDirection: "column" }}
         className="animate-slideUp">
 
         {/* Header */}
@@ -135,7 +135,7 @@ export default function CartModal({ open, onClose, restaurantId, guestName, memb
                 {tableNumber && tableNumber !== "QR" ? `We'll bring it to Table ${tableNumber}.` : "We'll bring it to your table shortly."}
               </p>
               {orderId && <p style={{ fontSize: 12, color: "var(--gm-text-tertiary)", marginTop: 12, fontFamily: "monospace" }}>#{orderId.slice(0, 8).toUpperCase()}</p>}
-              <button onClick={onClose} style={{ marginTop: 24, width: "100%", height: 48, borderRadius: 14, border: "1px solid var(--gm-border)", background: "var(--gm-bg)", color: "var(--gm-text)", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>Back to Menu</button>
+              <button onClick={onClose} style={{ marginTop: 24, width: "100%", height: 48, borderRadius: "var(--gm-radius-pill)", border: "1px solid var(--gm-border)", background: "var(--gm-bg)", color: "var(--gm-text)", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>Back to Menu</button>
             </div>
           ) : isError ? (
             <div style={{ textAlign: "center", padding: "40px 0" }}>
@@ -165,7 +165,7 @@ export default function CartModal({ open, onClose, restaurantId, guestName, memb
                 </div>
               )}
               {items.map(item => (
-                <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--gm-bg)", borderRadius: 14, padding: 12 }}>
+                <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--gm-bg)", borderRadius: "var(--gm-radius-md)", padding: 14 }}>
                   <div style={{ position: "relative", width: 56, height: 56, borderRadius: 12, overflow: "hidden", flexShrink: 0, background: "var(--gm-border)" }}>
                     <Image src={item.image} alt={item.name} fill sizes="56px" className="object-cover"
                       onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
@@ -178,10 +178,10 @@ export default function CartModal({ open, onClose, restaurantId, guestName, memb
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                     <button onClick={() => decrement(item.id)}
-                      style={{ width: 28, height: 28, borderRadius: 9, border: "1px solid var(--gm-border)", background: "var(--gm-surface)", color: "var(--gm-text)", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                      style={{ width: 28, height: 28, borderRadius: 50, border: "1px solid var(--gm-border)", background: "var(--gm-surface)", color: "var(--gm-text)", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
                     <span style={{ fontSize: 14, fontWeight: 700, color: "var(--gm-text)", width: 20, textAlign: "center" }} className="tabular-nums">{item.quantity}</span>
                     <button onClick={() => increment(item.id)}
-                      style={{ width: 28, height: 28, borderRadius: 9, border: "none", background: "var(--gm-primary)", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                      style={{ width: 28, height: 28, borderRadius: 50, border: "none", background: "var(--gm-primary)", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
                     <button onClick={() => remove(item.id)}
                       style={{ width: 28, height: 28, borderRadius: 9, border: "none", background: "var(--gm-danger-bg)", color: "var(--gm-danger)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginLeft: 2 }}
                       aria-label={`Remove ${item.name}`}>
@@ -203,7 +203,7 @@ export default function CartModal({ open, onClose, restaurantId, guestName, memb
               <span style={{ fontSize: 16, fontWeight: 600, color: "var(--gm-text)" }}>Total</span>
               <span style={{ fontSize: 22, fontWeight: 700, color: "var(--gm-text)" }} className="price tabular-nums">{formatPrice(totalPrice)}</span>
             </div>
-            <button onClick={handlePlaceOrder} disabled={isPlacing} className="gm-btn-primary" style={{ width: "100%", height: 52, fontSize: 15 }}>
+            <button onClick={handlePlaceOrder} disabled={isPlacing} className="gm-btn-primary" style={{ width: "100%", height: 54, fontSize: 15, borderRadius: "9999px" }}>
               {isPlacing ? (
                 <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />

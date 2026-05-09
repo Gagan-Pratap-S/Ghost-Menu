@@ -22,11 +22,11 @@ interface Props {
 
 type Tab = "overview";
 
-function StatCard({ value, label, sub, accent = "var(--gm-primary)" }: { value: string; label: string; sub?: string; accent?: string }) {
+function StatCard({ value, label, sub, accent = "var(--gm-primary)", tint = "var(--gm-tint-orange)" }: { value: string; label: string; sub?: string; accent?: string; tint?: string }) {
   return (
-    <div className="gm-stat">
-      <div className="gm-stat-value" style={{ color: accent }}>{value}</div>
-      <div className="gm-stat-label">{label}</div>
+    <div style={{ background: tint, border: "1px solid var(--gm-border)", borderRadius: "var(--gm-radius-lg)", padding: 20 }}>
+      <div style={{ fontSize: 26, fontWeight: 700, color: accent, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{value}</div>
+      <div style={{ fontSize: 12, color: "var(--gm-text-secondary)", marginTop: 4, fontWeight: 500 }}>{label}</div>
       {sub && <div style={{ fontSize: 11, color: "var(--gm-text-tertiary)", marginTop: 2 }}>{sub}</div>}
     </div>
   );
@@ -66,7 +66,7 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
   return (
     <div style={{ minHeight: "100vh", background: "var(--gm-bg)" }}>
       {/* Header */}
-      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "var(--gm-surface)", borderBottom: "1px solid var(--gm-border)", boxShadow: "var(--gm-shadow-sm)" }}>
+      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "rgba(255,253,249,0.94)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderBottom: "1px solid var(--gm-border)", boxShadow: "var(--gm-shadow-sm)" }}>
         <div style={{ maxWidth: 480, margin: "0 auto", padding: "12px 20px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
@@ -101,8 +101,8 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
 
           {/* Quick links */}
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-            <a href="/admin/menu" style={{ flex: 1, textAlign: "center", padding: "7px 0", borderRadius: 9, border: "1px solid var(--gm-border)", fontSize: 13, fontWeight: 500, color: "var(--gm-text-secondary)", textDecoration: "none", background: "var(--gm-bg)" }}>Menu ({items.length})</a>
-            <a href="/admin/orders" style={{ flex: 1, textAlign: "center", padding: "7px 0", borderRadius: 9, border: "1px solid var(--gm-border)", fontSize: 13, fontWeight: 500, color: "var(--gm-text-secondary)", textDecoration: "none", background: "var(--gm-bg)" }}>Live Orders</a>
+            <a href="/admin/menu" style={{ flex: 1, textAlign: "center", padding: "7px 0", borderRadius: "var(--gm-radius-pill)", border: "1px solid var(--gm-border)", fontSize: 13, fontWeight: 500, color: "var(--gm-text-secondary)", textDecoration: "none", background: "var(--gm-bg)" }}>Menu ({items.length})</a>
+            <a href="/admin/orders" style={{ flex: 1, textAlign: "center", padding: "7px 0", borderRadius: "var(--gm-radius-pill)", border: "1px solid var(--gm-border)", fontSize: 13, fontWeight: 500, color: "var(--gm-text-secondary)", textDecoration: "none", background: "var(--gm-bg)" }}>Live Orders</a>
           </div>
         </div>
       </header>
@@ -130,10 +130,10 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
 
             {/* Stats grid */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <StatCard value={totalViews.toLocaleString()} label="Total Views" sub="all items" />
-              <StatCard value={totalClicks.toLocaleString()} label="Total Clicks" accent="#3B82F6" sub="all items" />
-              <StatCard value={`${avgCTR}%`} label="Avg CTR" accent="var(--gm-success)" sub="clicks / views" />
-              <StatCard value={`${available}/${items.length}`} label="Available" accent="#8B5CF6" sub="menu items" />
+              <StatCard value={totalViews.toLocaleString()} label="Total Views" sub="all items" tint="var(--gm-tint-orange)" />
+              <StatCard value={totalClicks.toLocaleString()} label="Total Clicks" accent="#3B82F6" sub="all items" tint="var(--gm-tint-blue)" />
+              <StatCard value={`${avgCTR}%`} label="Avg CTR" accent="var(--gm-success)" sub="clicks / views" tint="var(--gm-tint-green)" />
+              <StatCard value={`${available}/${items.length}`} label="Available" accent="#8B5CF6" sub="menu items" tint="var(--gm-tint-lavender)" />
             </div>
 
             {/* Top performers */}
@@ -229,7 +229,7 @@ function AdminItemRow({ item, indicator, onEdit, onToggleAvailable, onToggleFeat
   onDelete: () => void;
 }) {
   return (
-    <div style={{ background: "var(--gm-surface)", border: "1px solid var(--gm-border)", borderRadius: 16, padding: 14, boxShadow: "var(--gm-shadow-sm)", opacity: item.available ? 1 : 0.55 }}>
+    <div style={{ background: "var(--gm-surface)", border: "1px solid var(--gm-border)", borderRadius: "var(--gm-radius-md)", padding: 14, boxShadow: "var(--gm-shadow-sm)", opacity: item.available ? 1 : 0.55 }}>
       <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
         <div style={{ position: "relative", width: 52, height: 52, borderRadius: 12, overflow: "hidden", flexShrink: 0, background: "var(--gm-bg)" }}>
           <Image src={item.image} alt={item.name} fill sizes="52px" className="object-cover"
