@@ -100,8 +100,8 @@ export default function ItemForm({ mode, item, onSave, onCancel }: Props) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div>
             <label style={labelStyle}>Price (₹) *</label>
-            <input className="gm-input" type="number" placeholder="0" value={form.price || ""}
-              onChange={e => set("price", parseInt(e.target.value) || 0)} min={1} max={9999} className="gm-input tabular-nums" />
+            <input className="gm-input tabular-nums" type="number" placeholder="0" value={form.price || ""}
+              onChange={e => set("price", parseInt(e.target.value) || 0)} min={1} max={9999} />
             {errors.price && <p style={{ fontSize: 12, color: "var(--gm-danger)", marginTop: 4 }}>{errors.price}</p>}
           </div>
           <div>
