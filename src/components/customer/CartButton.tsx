@@ -16,50 +16,53 @@ export default function CartButton({ restaurantId, guestName, memberCount, table
   const { totalItems, totalPrice } = useCart();
   const [open, setOpen]       = useState(false);
   const [visible, setVisible] = useState(false);
-  const prevTotal = useRef(0);
-  const badgeRef  = useRef<HTMLSpanElement>(null);
+  const prevTotal              = useRef(0);
+  const badgeRef               = useRef<HTMLSpanElement | null>(null);
 
   useEffect(() => {
-    if (totalItems > 0 && prevTotal.current === 0) {
-      setVisible(true);
-    } else if (totalItems === 0) {
-      setVisible(false);
-    }
+    if (totalItems > 0 && prevTotal.current === 0) setVisible(true);
+    else if (totalItems === 0) { setVisible(false); setOpen(false); }
 
-    // Cart badge pop animation on every increment
-    if (totalItems > prevTotal.current && badgeRef.current) {
+    if (totalItems > 0 && prevTotal.current !== totalItems && badgeRef.current) {
       const el = badgeRef.current;
       el.classList.remove("animate-cartPop");
-      void el.offsetWidth; // force reflow to re-trigger animation
+      void el.offsetWidth;
       el.classList.add("animate-cartPop");
     }
-
     prevTotal.current = totalItems;
   }, [totalItems]);
 
   if (!visible) return null;
 
-  const label = tableNumber && tableNumber !== "QR" ? `Table ${tableNumber} · ` : "";
-
   return (
     <>
-      {/* Full-width sticky cart bar — Zomato/Swiggy style */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-safe-bottom" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
+      <div
+        style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 40, padding: `0 16px max(16px, env(safe-area-inset-bottom)) 16px` }}
+        className="animate-cartAppear"
+      >
         <button
           onClick={() => setOpen(true)}
-          className="w-full max-w-md mx-auto flex items-center justify-between bg-stone-900 hover:bg-stone-800 active:bg-stone-950 text-white rounded-2xl px-5 py-3.5 shadow-2xl shadow-stone-900/40 transition-colors animate-cartAppear"
+          style={{
+            width: "100%", maxWidth: 480, margin: "0 auto", display: "flex", alignItems: "center",
+            justifyContent: "space-between", background: "var(--gm-text)", color: "#fff",
+            borderRadius: 18, padding: "14px 20px", border: "none", cursor: "pointer",
+            boxShadow: "var(--gm-shadow-xl)",
+          }}
           aria-label="Open cart"
-          style={{ display: "flex" }}
         >
-          <div className="flex items-center gap-2.5">
-            <span ref={badgeRef} className="flex items-center justify-center w-6 h-6 bg-orange-500 rounded-full text-xs font-bold flex-shrink-0">
-              {totalItems}
-            </span>
-            <span className="font-display font-bold text-sm">
-              {label}View Cart
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span
+              ref={badgeRef}
+              style={{ width: 26, height: 26, borderRadius: "50%", background: "var(--gm-primary)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, flexShrink: 0 }}
+              className="tabular-nums"
+            >{totalItems}</span>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>
+              {tableNumber && tableNumber !== "QR" ? `Table ${tableNumber} · ` : ""}View Cart
             </span>
           </div>
-          <span className="font-display font-bold text-sm text-orange-400">{formatPrice(totalPrice)} →</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.7)" }} className="price tabular-nums">
+            {formatPrice(totalPrice)} →
+          </span>
         </button>
       </div>
 

@@ -9,9 +9,9 @@ import AdminDashboard from "@/components/admin/AdminDashboard";
 
 function LoadingScreen({ message }: { message: string }) {
   return (
-    <div className="min-h-screen bg-stone-900 flex flex-col items-center justify-center gap-3">
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3" style={{ background: "var(--gm-bg)" }}>
       <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-      <p className="text-stone-500 text-sm">{message}</p>
+      <p className="text-slate-500 text-sm">{message}</p>
     </div>
   );
 }
@@ -23,16 +23,25 @@ export default function AdminPage() {
   const [items, setItems]           = useState<MenuItem[]>([]);
   const [dataLoading, setDataLoading] = useState(false);
 
+  // ENH-4 + BUG-2 fix: unified auth guard
   useEffect(() => {
     if (authLoading) return;
-    if (!session) router.replace("/admin/login");
-  }, [session, authLoading, router]);
+    if (!session) {
+      router.replace("/admin/login");
+      return;
+    }
+    // Session exists but no restaurant → guide to onboarding
+    if (!restaurant) {
+      router.replace("/onboard");
+    }
+  }, [session, restaurant, authLoading, router]);
 
+  // Fetch menu items once we have a confirmed session + restaurant
   useEffect(() => {
     if (!session || !restaurant?.id) return;
     setDataLoading(true);
     fetchMenuItems(restaurant.id)
-      .then((data) => {
+      .then(data => {
         if (data && data.length > 0) setItems(data);
         else setItems(initialMenuItems);
       })
@@ -52,16 +61,16 @@ export default function AdminPage() {
     else         setItems(prev => prev.filter(i => i.id !== tempId));
   };
 
+  // BUG-2: snapshot before optimistic update, rollback on null response
   const handleUpdate = async (id: number, data: Partial<MenuItem>) => {
     if (!restaurant?.id) return;
-    // Save previous state for rollback
-    const prev = items.find(i => i.id === id);
-    // Optimistic apply
+    const prev = items.find(i => i.id === id); // snapshot
     setItems(curr => curr.map(i => i.id === id ? { ...i, ...data } : i));
     const updated = await updateMenuItem(id, restaurant.id, data);
-    if (!updated && prev) {
-      // Rollback to previous state on failure
-      setItems(curr => curr.map(i => i.id === id ? prev : i));
+    if (updated) {
+      setItems(curr => curr.map(i => i.id === id ? { ...i, ...updated } : i));
+    } else if (prev) {
+      setItems(curr => curr.map(i => i.id === id ? prev : i)); // rollback
       console.error("[ghost-menu] handleUpdate: server returned null, rolled back item", id);
     }
   };
@@ -70,10 +79,7 @@ export default function AdminPage() {
     if (!restaurant?.id) return;
     setItems(prev => prev.filter(i => i.id !== id));
     const ok = await deleteMenuItem(id, restaurant.id);
-    if (!ok) {
-      // Rollback: refetch full list
-      fetchMenuItems(restaurant.id).then(d => { if (d) setItems(d); });
-    }
+    if (!ok) fetchMenuItems(restaurant.id).then(d => { if (d) setItems(d); });
   };
 
   return (

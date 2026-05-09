@@ -4,106 +4,78 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { LS } from "@/lib/constants";
 import { useRouter } from "next/navigation";
 
-// ─── QR Scanner Modal ─────────────────────────────────────────────────────────
 function QRScannerModal({ onClose, onResult }: { onClose: () => void; onResult: (url: string) => void }) {
-  const videoRef    = useRef<HTMLVideoElement>(null);
-  const scannerRef  = useRef<import("qr-scanner").default | null>(null);
-  const [error, setError]   = useState<string | null>(null);
-  const [scanning, setScanning] = useState(true);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const scannerRef = useRef<import("qr-scanner").default | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-
-    async function startScanner() {
+    async function start() {
       try {
         const QrScanner = (await import("qr-scanner")).default;
-        const hasCamera = await QrScanner.hasCamera();
-        if (!hasCamera) {
-          if (!cancelled) setError("no-camera");
-          return;
-        }
+        if (!await QrScanner.hasCamera()) { if (!cancelled) setError("no-camera"); return; }
         if (!videoRef.current || cancelled) return;
         const scanner = new QrScanner(
           videoRef.current,
-          (result) => {
-            const text = typeof result === "string" ? result : result.data;
-            scanner.stop();
-            if (!cancelled) onResult(text);
-          },
-          { preferredCamera: "environment", highlightScanRegion: true, highlightCodeOutline: true }
+          (result) => { scanner.stop(); if (!cancelled) onResult(typeof result === "string" ? result : result.data); },
+          { preferredCamera: "environment", highlightScanRegion: true }
         );
         scannerRef.current = scanner;
         await scanner.start();
-        if (!cancelled) setScanning(true);
-      } catch (err: unknown) {
+      } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        if (!cancelled) {
-          if (msg.includes("permission") || msg.includes("NotAllowed")) setError("denied");
-          else if (msg.includes("NotFound") || msg.includes("device")) setError("no-camera");
-          else setError("unavailable");
-        }
+        if (!cancelled) setError(msg.includes("permission") || msg.includes("NotAllowed") ? "denied" : "no-camera");
       }
     }
-
-    startScanner();
-    return () => {
-      cancelled = true;
-      scannerRef.current?.stop();
-      scannerRef.current?.destroy();
-    };
+    start();
+    return () => { cancelled = true; scannerRef.current?.stop(); scannerRef.current?.destroy(); };
   }, [onResult]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black flex flex-col">
-      <div className="flex items-center justify-between px-4 py-4 flex-shrink-0">
-        <p className="text-white font-display font-bold text-base">Scan QR Code</p>
-        <button onClick={onClose} className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors text-xl">×</button>
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: "#000" }}>
+      <div className="flex items-center justify-between px-5 py-5">
+        <p style={{ color: "#fff", fontWeight: 600, fontSize: 16 }}>Scan QR Code</p>
+        <button onClick={onClose} style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.12)", color: "#fff", border: "none", fontSize: 20, cursor: "pointer" }}>×</button>
       </div>
-      <div className="flex-1 flex flex-col items-center justify-center px-6">
-        {error === "no-camera" || error === "unavailable" ? (
-          <div className="text-center max-w-xs">
-            <div className="text-5xl mb-4">📷</div>
-            <p className="text-white font-display font-bold text-lg mb-2">Camera not available</p>
-            <p className="text-stone-400 text-sm leading-relaxed mb-6">Use your phone's camera app or Google Lens to scan the QR code on the table.</p>
-            <button onClick={onClose} className="px-6 py-3 bg-orange-500 text-white font-bold rounded-2xl text-sm">Got it</button>
-          </div>
-        ) : error === "denied" ? (
-          <div className="text-center max-w-xs">
-            <div className="text-5xl mb-4">🔒</div>
-            <p className="text-white font-display font-bold text-lg mb-2">Camera access denied</p>
-            <p className="text-stone-400 text-sm leading-relaxed mb-6">Allow camera access in your browser settings, then try again.<br /><br />Or use your phone camera app to scan.</p>
-            <button onClick={onClose} className="px-6 py-3 bg-orange-500 text-white font-bold rounded-2xl text-sm">Got it</button>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 24px" }}>
+        {error ? (
+          <div style={{ textAlign: "center", maxWidth: 280 }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>📷</div>
+            <p style={{ color: "#fff", fontWeight: 600, fontSize: 17, marginBottom: 8 }}>
+              {error === "denied" ? "Camera access denied" : "Camera not available"}
+            </p>
+            <p style={{ color: "#999", fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+              {error === "denied" ? "Allow camera access in your browser settings, then try again." : "Use your phone camera app or Google Lens to scan."}
+            </p>
+            <button className="gm-btn-primary" style={{ width: "100%" }} onClick={onClose}>Got it</button>
           </div>
         ) : (
-          <div className="relative w-full max-w-xs">
-            <video ref={videoRef} className="w-full rounded-2xl overflow-hidden bg-stone-900" style={{ aspectRatio: "1 / 1", objectFit: "cover" }} playsInline muted />
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-48 h-48 border-2 border-orange-500 rounded-2xl opacity-80">
-                <div className="absolute -top-0.5 -left-0.5 w-6 h-6 border-t-4 border-l-4 border-orange-500 rounded-tl-xl" />
-                <div className="absolute -top-0.5 -right-0.5 w-6 h-6 border-t-4 border-r-4 border-orange-500 rounded-tr-xl" />
-                <div className="absolute -bottom-0.5 -left-0.5 w-6 h-6 border-b-4 border-l-4 border-orange-500 rounded-bl-xl" />
-                <div className="absolute -bottom-0.5 -right-0.5 w-6 h-6 border-b-4 border-r-4 border-orange-500 rounded-br-xl" />
+          <div style={{ width: "100%", maxWidth: 280, position: "relative" }}>
+            <video ref={videoRef} style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: 20, background: "#111" }} playsInline muted />
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
+              <div style={{ width: 180, height: 180, border: "2.5px solid var(--gm-primary)", borderRadius: 16, position: "relative" }}>
+                {[["0","0","tl"],["auto","0","tr"],["0","auto","bl"],["auto","auto","br"]].map(([t,l,k]) => (
+                  <div key={k} style={{ position: "absolute", top: t !== "auto" ? -2 : "auto", bottom: t === "auto" ? -2 : "auto", left: l !== "auto" ? -2 : "auto", right: l === "auto" ? -2 : "auto", width: 20, height: 20, borderTop: t !== "auto" ? `4px solid var(--gm-primary)` : "none", borderBottom: t === "auto" ? `4px solid var(--gm-primary)` : "none", borderLeft: l !== "auto" ? `4px solid var(--gm-primary)` : "none", borderRight: l === "auto" ? `4px solid var(--gm-primary)` : "none", borderRadius: 3 }} />
+                ))}
               </div>
             </div>
-            {scanning && <p className="text-center text-stone-400 text-xs mt-4">Point camera at the QR code on your table</p>}
+            <p style={{ color: "#999", fontSize: 13, textAlign: "center", marginTop: 16 }}>Point camera at the QR code on your table</p>
           </div>
         )}
       </div>
-      {!error && <div className="px-6 pb-8 flex-shrink-0 text-center"><p className="text-stone-600 text-xs">Can't scan? Use Google Lens on your phone</p></div>}
     </div>
   );
 }
 
-// ─── Welcome Page ─────────────────────────────────────────────────────────────
 export default function WelcomePage() {
   const router = useRouter();
-  const [name, setName]                 = useState("");
-  const [members, setMembers]           = useState(1);
-  const [savedName, setSavedName]       = useState("");
-  const [savedMembers, setSavedMembers] = useState(0);
-  const [mounted, setMounted]           = useState(false);
-  const [showScanner, setShowScanner]   = useState(false);
-  const [scanError, setScanError]       = useState<string | null>(null);
+  const [name, setName]           = useState("");
+  const [members, setMembers]     = useState(1);
+  const [savedName, setSavedName] = useState("");
+  const [mounted, setMounted]     = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -111,134 +83,86 @@ export default function WelcomePage() {
       const n = localStorage.getItem(LS.GUEST_NAME);
       const m = localStorage.getItem(LS.MEMBER_COUNT);
       if (n) setSavedName(n);
-      if (m) setSavedMembers(parseInt(m) || 1);
+      if (m) setMembers(parseInt(m) || 1);
     } catch {}
   }, []);
 
   const handleQRResult = useCallback((url: string) => {
     setShowScanner(false);
     try {
-      const parsed = new URL(url.startsWith("http") ? url : `https://placeholder.com${url}`);
-      const match  = parsed.pathname.match(/^\/menu\/([^/]+)/);
+      const parsed = new URL(url.startsWith("http") ? url : `https://x.com${url}`);
+      const match = parsed.pathname.match(/^\/menu\/([^/]+)/);
       if (match?.[1]) { router.push(`/menu/${match[1]}`); return; }
     } catch {}
-    const pathMatch = url.match(/\/menu\/([^/?\s]+)/);
-    if (pathMatch?.[1]) { router.push(`/menu/${pathMatch[1]}`); return; }
     setScanError("QR code doesn't link to a menu. Try again.");
     setTimeout(() => setScanError(null), 4000);
   }, [router]);
 
-  // Save guest info and navigate to the scanned slug or show scanner
   const handleEnter = () => {
     try {
       if (name.trim()) localStorage.setItem(LS.GUEST_NAME, name.trim());
       localStorage.setItem(LS.MEMBER_COUNT, String(members));
     } catch {}
-    // No default slug — guide user to scan QR instead
-    setScanError(null);
     setShowScanner(true);
   };
 
   if (!mounted) return null;
 
-  const displayName    = name.trim() || savedName;
-  const displayMembers = members || savedMembers;
-
   return (
     <>
-      <div className="min-h-screen bg-stone-900 flex flex-col items-center justify-center px-5 relative overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-[500px] h-[500px] bg-orange-500/8 rounded-full blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] bg-orange-600/8 rounded-full blur-3xl" />
-        </div>
-
-        <div className="relative z-10 w-full max-w-sm animate-slideUp">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-orange-500 rounded-2xl mb-4 shadow-xl shadow-orange-500/30">
-              <span className="text-3xl">🍽️</span>
-            </div>
-            <h1 className="font-display text-3xl font-bold text-white tracking-tight">Ghost Menu</h1>
-            <p className="text-stone-500 mt-1.5 text-sm">Scan the QR code on your table to begin</p>
+      <div style={{ minHeight: "100vh", background: "var(--gm-bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px 20px" }}>
+        <div className="animate-slideUp" style={{ width: "100%", maxWidth: 380 }}>
+          {/* Logo */}
+          <div style={{ textAlign: "center", marginBottom: 32 }}>
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: "var(--gm-primary)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 28, marginBottom: 16, boxShadow: "0 4px 16px rgba(223,88,48,0.25)" }}>🍽️</div>
+            <h1 style={{ fontSize: 26, fontWeight: 700, color: "var(--gm-text)", margin: 0, letterSpacing: "-0.02em" }}>Ghost Menu</h1>
+            <p style={{ fontSize: 14, color: "var(--gm-text-secondary)", marginTop: 4 }}>Scan the QR code on your table to begin</p>
           </div>
 
-          <div className="bg-stone-800/70 backdrop-blur-md border border-stone-700/60 rounded-3xl p-6 shadow-2xl space-y-4">
+          {/* Card */}
+          <div className="gm-card" style={{ padding: 24 }}>
             {savedName && !name && (
-              <div className="bg-stone-700/50 rounded-2xl px-4 py-3">
-                <p className="text-stone-400 text-xs">Welcome back</p>
-                <p className="text-white font-semibold mt-0.5">{savedName} 👋</p>
+              <div style={{ background: "var(--gm-bg)", borderRadius: 12, padding: "10px 14px", marginBottom: 20 }}>
+                <p style={{ fontSize: 12, color: "var(--gm-text-tertiary)", marginBottom: 2 }}>Welcome back</p>
+                <p style={{ fontSize: 15, fontWeight: 500, color: "var(--gm-text)" }}>{savedName} 👋</p>
               </div>
             )}
 
-            <div>
-              <label className="text-xs font-semibold text-stone-400 block mb-1.5">Your name (optional)</label>
-              <input
-                type="text"
-                placeholder={savedName || "e.g. Raj"}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleEnter()}
-                maxLength={32}
-                className="w-full bg-stone-700/60 border border-stone-600/60 text-white placeholder-stone-600 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500/70 focus:bg-stone-700 transition-all"
-              />
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--gm-text-secondary)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Your name (optional)</label>
+              <input className="gm-input" type="text" placeholder={savedName || "e.g. Raj"} value={name} onChange={e => setName(e.target.value)} onKeyDown={e => e.key === "Enter" && handleEnter()} maxLength={32} />
             </div>
 
-            <div>
-              <label className="text-xs font-semibold text-stone-400 block mb-1.5">Party size</label>
-              <div className="flex items-center gap-3">
-                <button onClick={() => setMembers(m => Math.max(1, m - 1))} className="w-10 h-10 rounded-xl bg-stone-700 text-white text-xl font-bold hover:bg-stone-600 active:scale-90 transition-all flex items-center justify-center">−</button>
-                <div className="flex-1 text-center">
-                  <span className="text-white font-display font-bold text-2xl">{members}</span>
-                  <p className="text-stone-500 text-xs mt-0.5">{members === 1 ? "person" : "people"}</p>
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--gm-text-secondary)", marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.05em" }}>Party size</label>
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <button onClick={() => setMembers(m => Math.max(1, m - 1))}
+                  style={{ width: 44, height: 44, borderRadius: 12, border: "1px solid var(--gm-border-strong)", background: "var(--gm-surface)", fontSize: 22, cursor: "pointer", color: "var(--gm-text)", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                <div style={{ flex: 1, textAlign: "center" }}>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: "var(--gm-text)" }}>{members}</div>
+                  <div style={{ fontSize: 12, color: "var(--gm-text-tertiary)" }}>{members === 1 ? "person" : "people"}</div>
                 </div>
-                <button onClick={() => setMembers(m => Math.min(20, m + 1))} className="w-10 h-10 rounded-xl bg-stone-700 text-white text-xl font-bold hover:bg-stone-600 active:scale-90 transition-all flex items-center justify-center">+</button>
+                <button onClick={() => setMembers(m => Math.min(20, m + 1))}
+                  style={{ width: 44, height: 44, borderRadius: 12, border: "1px solid var(--gm-border-strong)", background: "var(--gm-surface)", fontSize: 22, cursor: "pointer", color: "var(--gm-text)", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
               </div>
             </div>
-
-            {(displayName || displayMembers > 0) && (
-              <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl px-3 py-2">
-                <p className="text-orange-300 text-xs text-center">
-                  {displayName ? `Hi ${displayName}` : "Hey there"} · Table for {displayMembers || members} 🪑
-                </p>
-              </div>
-            )}
 
             {scanError && (
-              <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
-                <p className="text-red-400 text-xs text-center">{scanError}</p>
+              <div style={{ background: "var(--gm-danger-bg)", border: "1px solid var(--gm-danger-border)", borderRadius: 10, padding: "8px 12px", marginBottom: 16, fontSize: 13, color: "var(--gm-danger)" }}>
+                {scanError}
               </div>
             )}
 
-            <button
-              onClick={() => { setScanError(null); setShowScanner(true); }}
-              className="w-full bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-display font-bold rounded-2xl py-3.5 text-sm transition-all shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M3 3h7v7H3zm2 2v3h3V5zm8-2h7v7h-7zm2 2v3h3V5zM3 13h7v7H3zm2 2v3h3v-3zm11-2h2v2h-2zm2 2h2v2h-2zm-2 2h2v2h-2zm2 2h2v2h-2z"/>
-              </svg>
+            <button className="gm-btn-primary" style={{ width: "100%", marginBottom: 10 }} onClick={handleEnter}>
               Scan QR Code
             </button>
-
-            <button
-              onClick={handleEnter}
-              className="w-full bg-stone-700/60 hover:bg-stone-700 border border-stone-600/60 text-stone-300 hover:text-white font-semibold rounded-2xl py-3 text-sm transition-all"
-            >
-              I already have a menu link
-            </button>
-          </div>
-
-          <div className="flex justify-between mt-4 px-1">
-            <p className="text-stone-700 text-xs">Powered by Ghost Menu</p>
-            <a href="/admin/login" className="text-stone-700 text-xs hover:text-stone-500 transition-colors">Admin →</a>
+            <a href="/admin/login" style={{ display: "block", textAlign: "center", fontSize: 13, color: "var(--gm-text-tertiary)", textDecoration: "none", marginTop: 4 }}>
+              Admin login →
+            </a>
           </div>
         </div>
       </div>
-
-      {showScanner && (
-        <QRScannerModal
-          onClose={() => setShowScanner(false)}
-          onResult={handleQRResult}
-        />
-      )}
+      {showScanner && <QRScannerModal onClose={() => setShowScanner(false)} onResult={handleQRResult} />}
     </>
   );
 }

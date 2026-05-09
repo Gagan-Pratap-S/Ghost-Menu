@@ -14,13 +14,11 @@ function LoginForm() {
   const [error, setError]       = useState("");
   const [busy, setBusy]         = useState(false);
   const [showPass, setShowPass] = useState(false);
-  const submitting               = useRef(false); // prevent double-submit
+  const submitting               = useRef(false);
 
-  // Redirect if already authenticated (after auth resolves)
   useEffect(() => {
     if (!loading && session) {
-      const next = searchParams.get("next") ?? "/admin";
-      router.replace(next);
+      router.replace(searchParams.get("next") ?? "/admin");
     }
   }, [session, loading, router, searchParams]);
 
@@ -30,105 +28,76 @@ function LoginForm() {
     submitting.current = true;
     setBusy(true);
     setError("");
-
     const err = await login(email.trim(), password);
-
     if (err) {
       setError(err);
       setBusy(false);
       submitting.current = false;
-      // Don't redirect — stay on login page to show error
     }
-    // On success: useEffect above handles the redirect once session state updates
-    // (busy stays true while redirect happens — no flash back to form)
   };
 
-  // Show spinner while auth check runs on mount
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-stone-900 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  // Don't render form if already logged in (redirect is happening)
-  if (session) return null;
+  if (loading) return (
+    <div style={{ minHeight: "100vh", background: "var(--gm-bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ width: 32, height: 32, border: "2.5px solid var(--gm-border)", borderTopColor: "var(--gm-primary)", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-stone-900 flex items-center justify-center px-5">
-      <div className="w-full max-w-sm animate-slideUp">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-orange-500 rounded-2xl mb-3 shadow-lg shadow-orange-500/30">
-            <span className="text-2xl">🍽️</span>
-          </div>
-          <h1 className="font-display text-2xl font-bold text-white">Admin Login</h1>
-          <p className="text-stone-500 text-sm mt-1">Ghost Menu · Restaurant Portal</p>
+    <div style={{ minHeight: "100vh", background: "var(--gm-bg)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px 20px" }}>
+      <div className="animate-slideUp" style={{ width: "100%", maxWidth: 380 }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: "var(--gm-primary)", display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: 24, marginBottom: 16, boxShadow: "0 4px 16px rgba(223,88,48,0.25)" }}>🍽️</div>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: "var(--gm-text)", margin: 0, letterSpacing: "-0.02em" }}>Admin Login</h1>
+          <p style={{ fontSize: 14, color: "var(--gm-text-secondary)", marginTop: 4 }}>Ghost Menu · Restaurant Portal</p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="bg-stone-800/70 backdrop-blur-md border border-stone-700/60 rounded-3xl p-6 space-y-4 shadow-2xl"
-        >
-          <div>
-            <label className="text-xs font-semibold text-stone-400 block mb-1.5">Email</label>
-            <input
-              type="email"
-              placeholder="you@restaurant.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              disabled={busy}
-              className="w-full bg-stone-700/60 border border-stone-600/60 text-white placeholder-stone-600 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:border-orange-500/70 focus:bg-stone-700 transition-all disabled:opacity-50"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-stone-400 block mb-1.5">Password</label>
-            <div className="relative">
-              <input
-                type={showPass ? "text" : "password"}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-                disabled={busy}
-                className="w-full bg-stone-700/60 border border-stone-600/60 text-white placeholder-stone-600 rounded-2xl px-4 py-3 pr-11 text-sm focus:outline-none focus:border-orange-500/70 focus:bg-stone-700 transition-all disabled:opacity-50"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPass(v => !v)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300 text-xs font-medium"
-              >
-                {showPass ? "Hide" : "Show"}
-              </button>
+        <div className="gm-card" style={{ padding: 32 }}>
+          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--gm-text-secondary)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Email</label>
+              <input className="gm-input" type="email" value={email} onChange={e => setEmail(e.target.value)}
+                placeholder="you@restaurant.com" required autoComplete="email" />
             </div>
-          </div>
 
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">
-              <p className="text-red-400 text-xs">{error}</p>
+            <div>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "var(--gm-text-secondary)", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em" }}>Password</label>
+              <div style={{ position: "relative" }}>
+                <input className="gm-input" type={showPass ? "text" : "password"} value={password}
+                  onChange={e => setPassword(e.target.value)} placeholder="••••••••" required
+                  autoComplete="current-password" style={{ paddingRight: 60 }} />
+                <button type="button" onClick={() => setShowPass(v => !v)}
+                  style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: 12, fontWeight: 600, color: "var(--gm-text-secondary)", cursor: "pointer" }}>
+                  {showPass ? "Hide" : "Show"}
+                </button>
+              </div>
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={busy || !email || !password}
-            className="w-full bg-orange-500 hover:bg-orange-400 active:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-display font-bold rounded-2xl py-3.5 text-sm transition-all shadow-lg shadow-orange-500/20"
-          >
-            {busy ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Signing in…
-              </span>
-            ) : "Sign In →"}
-          </button>
-        </form>
+            {error && (
+              <div style={{ background: "var(--gm-danger-bg)", border: "1px solid var(--gm-danger-border)", borderRadius: 10, padding: "10px 14px", fontSize: 13, color: "var(--gm-danger)" }}>
+                {error}
+              </div>
+            )}
 
-        <p className="text-center text-stone-700 text-xs mt-5">
-          <a href="/" className="hover:text-stone-500 transition-colors">← Back to menu</a>
+            <button type="submit" className="gm-btn-primary" disabled={busy || !email || !password} style={{ width: "100%" }}>
+              {busy ? (
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
+                  Signing in…
+                </span>
+              ) : "Sign In →"}
+            </button>
+
+            <p style={{ textAlign: "center", fontSize: 13, color: "var(--gm-text-tertiary)", marginTop: 4 }}>
+              First time?{" "}
+              <a href="/onboard" style={{ color: "var(--gm-primary)", textDecoration: "none", fontWeight: 500 }}>
+                Set up your restaurant →
+              </a>
+            </p>
+          </form>
+        </div>
+
+        <p style={{ textAlign: "center", fontSize: 13, color: "var(--gm-text-tertiary)", marginTop: 20 }}>
+          <a href="/" style={{ color: "var(--gm-text-tertiary)", textDecoration: "none" }}>← Back to menu</a>
         </p>
       </div>
     </div>
@@ -136,13 +105,5 @@ function LoginForm() {
 }
 
 export default function LoginPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-stone-900 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    }>
-      <LoginForm />
-    </Suspense>
-  );
+  return <Suspense fallback={null}><LoginForm /></Suspense>;
 }

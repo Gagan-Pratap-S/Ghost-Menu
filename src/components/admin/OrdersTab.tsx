@@ -7,138 +7,40 @@ import { formatPrice } from "@/lib/constants";
 interface Props { restaurantId: string; }
 
 const STATUS_CONFIG: Record<OrderStatus, {
-  label: string;
-  color: string;
-  next: OrderStatus | null;
-  nextLabel: string | null;
-  nextColor: string;
+  label: string; cssClass: string;
+  next: OrderStatus | null; nextLabel: string | null;
 }> = {
-  pending:   { label: "Pending",   color: "bg-yellow-100 text-yellow-700 border-yellow-200",    next: "preparing", nextLabel: "Accept →",      nextColor: "bg-blue-500 hover:bg-blue-600" },
-  preparing: { label: "Preparing", color: "bg-blue-100 text-blue-700 border-blue-200",          next: "ready",     nextLabel: "Mark Ready ✓",  nextColor: "bg-violet-500 hover:bg-violet-600" },
-  ready:     { label: "Ready",     color: "bg-violet-100 text-violet-700 border-violet-200",    next: "served",    nextLabel: "Mark Served 🍽", nextColor: "bg-emerald-500 hover:bg-emerald-600" },
-  served:    { label: "Served",    color: "bg-emerald-100 text-emerald-700 border-emerald-200", next: null,        nextLabel: null,             nextColor: "" },
-  cancelled: { label: "Cancelled", color: "bg-red-100 text-red-500 border-red-200",            next: null,        nextLabel: null,             nextColor: "" },
+  pending:   { label: "Pending",   cssClass: "gm-status gm-status-pending",   next: "preparing", nextLabel: "Accept →" },
+  preparing: { label: "Preparing", cssClass: "gm-status gm-status-preparing", next: "ready",     nextLabel: "Mark Ready ✓" },
+  ready:     { label: "Ready",     cssClass: "gm-status gm-status-ready",     next: "served",    nextLabel: "Mark Served 🍽" },
+  served:    { label: "Served",    cssClass: "gm-status gm-status-served",    next: null,        nextLabel: null },
+  cancelled: { label: "Cancelled", cssClass: "gm-status gm-status-cancelled", next: null,        nextLabel: null },
 };
 
-// Live elapsed time — recomputes every 30 seconds
-function useElapsed(dateStr?: string): { label: string; urgency: "normal" | "warning" | "danger" } {
-  const [tick, setTick] = useState(0);
-
-  useEffect(() => {
-    const id = setInterval(() => setTick(t => t + 1), 30_000);
-    return () => clearInterval(id);
-  }, []);
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const diff = dateStr ? (Date.now() - new Date(dateStr).getTime()) / 1000 : 0;
-  const mins = Math.floor(diff / 60);
-
-  let label = "just now";
-  if (diff >= 3600) label = `${Math.floor(diff / 3600)}h ago`;
-  else if (diff >= 60) label = `${mins}m ago`;
-
-  void tick; // consumed to trigger re-render
-
-  const urgency = mins >= 10 ? "danger" : mins >= 5 ? "warning" : "normal";
-  return { label, urgency };
-}
-
-function OrderCard({ order, onStatusChange }: { order: Order; isNew: boolean; onStatusChange: (o: Order, s: OrderStatus) => void }) {
-  const cfg = STATUS_CONFIG[order.status];
-  const { label: timeLabel, urgency } = useElapsed(order.created_at);
-
-  const timeColor =
-    urgency === "danger"  ? "text-red-600 font-semibold animate-urgencyPulse" :
-    urgency === "warning" ? "text-amber-600 font-medium" :
-    "text-stone-400";
-
-  return (
-    <div className="bg-white rounded-2xl border border-stone-100 shadow-sm p-4">
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-display font-bold text-sm text-stone-900">{order.guest_name}</p>
-            {order.table_number && order.table_number !== "QR" && (
-              <span className="text-xs bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full font-medium">Table {order.table_number}</span>
-            )}
-            <span className="text-xs text-stone-400">· {order.member_count} pax</span>
-          </div>
-          <p className={`text-xs mt-0.5 ${timeColor}`}>
-            {timeLabel} · {formatPrice(order.total)}
-            {urgency === "danger" && " ⚠️"}
-          </p>
-        </div>
-        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border flex-shrink-0 ${cfg.color}`}>
-          {cfg.label}
-        </span>
-      </div>
-
-      <div className="space-y-0.5 mb-3 bg-stone-50 rounded-xl p-2.5">
-        {order.items.map((item, idx) => (
-          <div key={idx} className="flex justify-between text-xs text-stone-600">
-            <span>{item.quantity}× {item.name}</span>
-            <span className="text-stone-400">{formatPrice(item.price * item.quantity)}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex gap-2">
-        {cfg.next && cfg.nextLabel && (
-          <button
-            onClick={() => onStatusChange(order, cfg.next!)}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold text-white transition-colors ${cfg.nextColor}`}
-          >
-            {cfg.nextLabel}
-          </button>
-        )}
-        {(order.status === "pending" || order.status === "preparing") && (
-          <button
-            onClick={() => onStatusChange(order, "cancelled")}
-            className="px-3 py-2 rounded-xl text-xs font-semibold text-red-400 hover:bg-red-50 transition-colors border border-transparent hover:border-red-100"
-          >
-            Cancel
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function LiveDot() {
-  return (
-    <span className="relative flex h-2 w-2">
-      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-    </span>
-  );
-}
-
-// Play a short audio chime for new orders using Web Audio API (no file needed)
 function playNewOrderChime() {
   try {
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
+    const ctx  = new AudioContext();
+    const osc  = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
     gain.connect(ctx.destination);
-    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(880,  ctx.currentTime);
     osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.08);
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-    osc.start(ctx.currentTime);
+    osc.start();
     osc.stop(ctx.currentTime + 0.3);
   } catch {}
 }
 
-// Flash the tab title for new orders
 let _titleFlashInterval: ReturnType<typeof setInterval> | null = null;
 function flashTabTitle() {
+  if (typeof document === "undefined") return;
   if (_titleFlashInterval) return;
   const orig = document.title;
   _titleFlashInterval = setInterval(() => {
     document.title = document.title === orig ? "★ New Order!" : orig;
   }, 1000);
-  // Stop after 20 seconds or when the user focuses the window
   const stop = () => {
     if (_titleFlashInterval) { clearInterval(_titleFlashInterval); _titleFlashInterval = null; }
     document.title = orig;
@@ -148,29 +50,106 @@ function flashTabTitle() {
   setTimeout(stop, 20_000);
 }
 
+function useElapsed(dateStr?: string): { label: string; urgency: "normal" | "warning" | "danger" } {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(n => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  if (!dateStr) return { label: "", urgency: "normal" };
+  const mins = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60_000);
+  const label = mins < 1 ? "just now" : mins < 60 ? `${mins}m ago` : `${Math.floor(mins / 60)}h ago`;
+  const urgency: "normal" | "warning" | "danger" = mins >= 10 ? "danger" : mins >= 5 ? "warning" : "normal";
+  return { label, urgency };
+}
+
+interface OrderCardProps {
+  order: Order;
+  isNew: boolean;
+  onStatusChange: (order: Order, next: OrderStatus) => void;
+}
+
+function OrderCard({ order, isNew, onStatusChange }: OrderCardProps) {
+  const { label: timeLabel, urgency } = useElapsed(order.created_at);
+  const cfg = STATUS_CONFIG[order.status];
+
+  const timeColor = urgency === "danger" ? "var(--gm-danger)" : urgency === "warning" ? "var(--gm-warning)" : "var(--gm-text-tertiary)";
+
+  const borderColor = urgency === "danger"
+    ? "var(--gm-danger-border)"
+    : isNew ? "var(--gm-primary)" : "var(--gm-border)";
+
+  const boxShadow = urgency === "danger"
+    ? "0 0 0 2px rgba(239,68,68,0.12), var(--gm-shadow-md)"
+    : isNew ? "0 0 0 2px rgba(223,88,48,0.15), var(--gm-shadow-md)"
+    : "var(--gm-shadow-md)";
+
+  return (
+    <div style={{ background: "var(--gm-surface)", border: `1px solid ${borderColor}`, borderRadius: 18, padding: 16, boxShadow, transition: "all 0.2s" }}>
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: "var(--gm-text)", margin: 0 }}>{order.guest_name}</p>
+            {order.table_number && order.table_number !== "QR" && (
+              <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 99, background: "var(--gm-bg)", border: "1px solid var(--gm-border)", color: "var(--gm-text-secondary)" }}>
+                Table {order.table_number}
+              </span>
+            )}
+            <span style={{ fontSize: 12, color: "var(--gm-text-tertiary)" }}>· {order.member_count} pax</span>
+            {isNew && (
+              <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 99, background: "#FFF7ED", color: "var(--gm-primary)", border: "1px solid #FDBA74", animation: "urgencyPulse 1s ease-in-out infinite" }}>
+                NEW
+              </span>
+            )}
+          </div>
+          <p style={{ fontSize: 12, marginTop: 2, color: timeColor }} className={urgency === "danger" ? "animate-urgencyPulse" : ""}>
+            <span style={{ fontWeight: urgency === "danger" ? 600 : 400 }}>
+              {timeLabel}{urgency !== "normal" ? " ⚠️" : ""}
+            </span>
+            {" · "}
+            <span className="tabular-nums price">{formatPrice(order.total)}</span>
+          </p>
+        </div>
+        <span className={cfg.cssClass}>{cfg.label}</span>
+      </div>
+
+      <div style={{ background: "var(--gm-bg)", borderRadius: 12, padding: "10px 12px", marginBottom: 12 }}>
+        {order.items.map((item, idx) => (
+          <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: idx < order.items.length - 1 ? 4 : 0 }}>
+            <span style={{ color: "var(--gm-text-secondary)" }}>{item.quantity}× {item.name}</span>
+            <span style={{ color: "var(--gm-text-tertiary)" }} className="tabular-nums price">{formatPrice(item.price * item.quantity)}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", gap: 8 }}>
+        {cfg.next && cfg.nextLabel && (
+          <button onClick={() => onStatusChange(order, cfg.next!)} className="gm-btn-primary" style={{ flex: 1, height: 40, fontSize: 13 }}>
+            {cfg.nextLabel}
+          </button>
+        )}
+        {(order.status === "pending" || order.status === "preparing") && (
+          <button onClick={() => onStatusChange(order, "cancelled")} className="gm-btn-danger" style={{ padding: "0 14px", fontSize: 13 }}>
+            Cancel
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function OrdersTab({ restaurantId }: Props) {
   const [orders, setOrders]           = useState<Order[]>([]);
   const [loading, setLoading]         = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasMore, setHasMore]         = useState(true);
   const [filter, setFilter]           = useState<OrderStatus | "all">("all");
   const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
   const [isLive, setIsLive]           = useState(false);
-  const loadedOnce                    = useRef(false);
+  const loadedOnce                     = useRef(false);
 
-  const load = useCallback(async (cursor?: string) => {
-    if (!cursor) {
-      const data = await fetchOrders(restaurantId);
-      setOrders(data);
-      setHasMore(data.length === 50);
-      if (!loadedOnce.current) { setLoading(false); loadedOnce.current = true; }
-    } else {
-      setLoadingMore(true);
-      const data = await fetchOrders(restaurantId, cursor);
-      setOrders(prev => [...prev, ...data]);
-      setHasMore(data.length === 50);
-      setLoadingMore(false);
-    }
+  const load = useCallback(async () => {
+    const data = await fetchOrders(restaurantId);
+    setOrders(data);
+    if (!loadedOnce.current) { setLoading(false); loadedOnce.current = true; }
   }, [restaurantId]);
 
   useEffect(() => { load(); }, [load]);
@@ -179,28 +158,20 @@ export default function OrdersTab({ restaurantId }: Props) {
     setIsLive(false);
     const unsub = subscribeToOrders(
       restaurantId,
-      (newOrder) => {
-        setOrders(prev => {
-          if (prev.find(o => o.id === newOrder.id)) return prev;
-          return [newOrder, ...prev];
-        });
+      newOrder => {
+        setOrders(prev => prev.find(o => o.id === newOrder.id) ? prev : [newOrder, ...prev]);
         if (newOrder.id) {
           setNewOrderIds(prev => new Set(prev).add(newOrder.id!));
-          setTimeout(() => {
-            setNewOrderIds(prev => { const n = new Set(prev); n.delete(newOrder.id!); return n; });
-          }, 3000);
+          setTimeout(() => setNewOrderIds(prev => { const n = new Set(prev); n.delete(newOrder.id!); return n; }), 3000);
         }
         playNewOrderChime();
         flashTabTitle();
         setIsLive(true);
       },
-      (updated) => {
-        setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
-        setIsLive(true);
-      }
+      updated => { setOrders(prev => prev.map(o => o.id === updated.id ? updated : o)); setIsLive(true); }
     );
-    const liveTimer = setTimeout(() => setIsLive(true), 1500);
-    return () => { unsub(); clearTimeout(liveTimer); setIsLive(false); };
+    const t = setTimeout(() => setIsLive(true), 1500);
+    return () => { unsub(); clearTimeout(t); setIsLive(false); };
   }, [restaurantId]);
 
   const handleStatusChange = async (order: Order, next: OrderStatus) => {
@@ -210,52 +181,45 @@ export default function OrdersTab({ restaurantId }: Props) {
     if (!ok) setOrders(prev => prev.map(o => o.id === order.id ? order : o));
   };
 
-  const activeOrders = orders.filter(o => o.status !== "served" && o.status !== "cancelled");
   const pendingCount = orders.filter(o => o.status === "pending").length;
   const filtered     = filter === "all" ? orders : orders.filter(o => o.status === filter);
 
-  const oldestCursor = orders.length > 0 ? orders[orders.length - 1].created_at : undefined;
-
   return (
-    <div className="space-y-3 animate-fadeIn">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {isLive ? (
-            <><LiveDot /><span className="text-xs font-semibold text-emerald-600">Live</span></>
-          ) : (
-            <span className="text-xs text-stone-400">Connecting…</span>
-          )}
-          {activeOrders.length > 0 && <span className="text-xs text-stone-500 ml-1">· {activeOrders.length} active</span>}
-        </div>
-        <button onClick={() => load()} className="text-xs text-stone-400 hover:text-stone-600 flex items-center gap-1 transition-colors">
-          <span>↻</span> Refresh
+    <div className="animate-fadeIn" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        {isLive ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--gm-success)", display: "inline-block", animation: "urgencyPulse 2s ease-in-out infinite" }} />
+            <span style={{ fontSize: 12, fontWeight: 500, color: "var(--gm-success)" }}>Live</span>
+          </div>
+        ) : (
+          <span style={{ fontSize: 12, color: "var(--gm-text-tertiary)" }}>Connecting…</span>
+        )}
+        <button onClick={load} style={{ fontSize: 13, color: "var(--gm-text-secondary)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+          ↻ Refresh
         </button>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+      <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }} className="scrollbar-none">
         {(["all", "pending", "preparing", "ready", "served"] as const).map(f => (
-          <button key={f} onClick={() => setFilter(f)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all capitalize ${
-              filter === f ? "bg-stone-900 text-white" : "bg-white border border-stone-200 text-stone-600 hover:border-stone-400"
-            }`}
-          >
+          <button key={f} onClick={() => setFilter(f)} className={filter === f ? "gm-chip-active" : "gm-chip-inactive"} style={{ flexShrink: 0 }}>
             {f === "all" ? `All (${orders.length})` : f === "pending" && pendingCount > 0 ? `Pending (${pendingCount})` : f}
           </button>
         ))}
       </div>
 
       {loading ? (
-        <div className="space-y-3">
-          {[0, 1, 2].map(i => <div key={i} className="h-28 bg-white rounded-2xl border border-stone-100 animate-pulse" />)}
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {[0,1,2].map(i => <div key={i} className="animate-skeleton" style={{ height: 120, borderRadius: 18 }} />)}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16">
-          <p className="text-3xl mb-2">📋</p>
-          <p className="font-display font-semibold text-stone-600">{filter === "all" ? "No orders yet" : `No ${filter} orders`}</p>
-          <p className="text-xs text-stone-400 mt-1">{filter === "all" ? "Orders appear here instantly when customers place them" : ""}</p>
+        <div style={{ textAlign: "center", padding: "64px 20px" }}>
+          <p style={{ fontSize: 32, marginBottom: 8 }}>📋</p>
+          <p style={{ fontSize: 16, fontWeight: 600, color: "var(--gm-text)" }}>{filter === "all" ? "No orders yet" : `No ${filter} orders`}</p>
+          {filter === "all" && <p style={{ fontSize: 13, color: "var(--gm-text-secondary)", marginTop: 4 }}>Orders appear here instantly when customers place them</p>}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {filtered.map(order => (
             <OrderCard
               key={order.id}
@@ -264,15 +228,6 @@ export default function OrdersTab({ restaurantId }: Props) {
               onStatusChange={handleStatusChange}
             />
           ))}
-          {hasMore && filter === "all" && (
-            <button
-              onClick={() => load(oldestCursor)}
-              disabled={loadingMore}
-              className="w-full py-3 bg-white border border-stone-200 rounded-2xl text-xs font-semibold text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-50"
-            >
-              {loadingMore ? "Loading…" : "Load older orders"}
-            </button>
-          )}
         </div>
       )}
     </div>

@@ -1,14 +1,20 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+export const dynamic = "force-dynamic";
+
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
 import { initialMenuItems, MenuItem } from "@/data/menuData";
-import { fetchMenuItems, fetchRestaurantBySlug, incrementClick, Restaurant } from "@/lib/supabase";
+import {
+  fetchMenuItems, fetchRestaurantBySlug, fetchRecentOrderCounts,
+  incrementClick, incrementView, Restaurant,
+} from "@/lib/supabase";
 import { CartProvider } from "@/context/CartContext";
 import MenuPage from "@/components/customer/MenuPage";
 import ItemModal from "@/components/customer/ItemModal";
 import { LS } from "@/lib/constants";
+
+interface WeatherContext { temp: number; isRaining: boolean; }
 
 function CustomerMenuPageInner() {
   const params       = useParams();
@@ -23,8 +29,13 @@ function CustomerMenuPageInner() {
   const [memberCount, setMemberCount]   = useState(1);
   const [tableNumber, setTableNumber]   = useState("QR");
   const [kitchenStatus, setKitchenStatus] = useState<"normal" | "busy">("normal");
+  const [weatherContext, setWeatherContext] = useState<WeatherContext | undefined>(undefined);
+  const [recentOrderCounts, setRecentOrderCounts] = useState<Record<number, number>>({});
+
+  // BUG-3: useRef for restaurantId so handleItemClick has no stale closure
   const restaurantIdRef = useRef<string | undefined>(undefined);
 
+  // Load guest info + table from localStorage / URL param
   useEffect(() => {
     try {
       const n = localStorage.getItem(LS.GUEST_NAME);
@@ -43,15 +54,18 @@ function CustomerMenuPageInner() {
     } catch {}
   }, [searchParams]);
 
+  // Fetch restaurant + menu
   useEffect(() => {
     setLoading(true);
     fetchRestaurantBySlug(slug).then(async (rest) => {
       if (rest) {
         setRestaurant(rest);
         restaurantIdRef.current = rest.id;
-        // Sync kitchen_busy from DB if the column exists
-        if (typeof rest.kitchen_busy === "boolean") {
-          setKitchenStatus(rest.kitchen_busy ? "busy" : "normal");
+        // QUAL-1: read kitchen_busy from DB
+        if (rest.kitchen_busy) setKitchenStatus("busy");
+        // SCALE-1: apply theme color
+        if (rest.theme_color) {
+          document.documentElement.style.setProperty("--brand", rest.theme_color);
         }
         const data = await fetchMenuItems(rest.id);
         if (data && data.length > 0) setItems(data);
@@ -62,16 +76,63 @@ function CustomerMenuPageInner() {
     }).catch(() => setLoading(false));
   }, [slug]);
 
-  // FIX: Only increment CLICK here — views are tracked via IntersectionObserver in ItemCard
+  // REC-4: weather-aware scoring
+  // PERF-3: cache in sessionStorage with 2-hour TTL to avoid repeated geolocation prompts
+  useEffect(() => {
+    const WEATHER_CACHE_KEY = "ghostMenuWeather";
+    const WEATHER_TTL_MS    = 2 * 60 * 60 * 1000;
+    try {
+      const cached = sessionStorage.getItem(WEATHER_CACHE_KEY);
+      if (cached) {
+        const { data, ts } = JSON.parse(cached) as { data: WeatherContext; ts: number };
+        if (Date.now() - ts < WEATHER_TTL_MS) { setWeatherContext(data); return; }
+      }
+    } catch {}
+    navigator.geolocation?.getCurrentPosition(
+      async ({ coords }) => {
+        try {
+          const res  = await fetch(
+            `https://api.open-meteo.com/v1/forecast?latitude=${coords.latitude}&longitude=${coords.longitude}&current_weather=true`
+          );
+          const json = await res.json();
+          const ctx: WeatherContext = {
+            temp:      json.current_weather?.temperature ?? 25,
+            isRaining: (json.current_weather?.weathercode ?? 0) >= 61,
+          };
+          setWeatherContext(ctx);
+          sessionStorage.setItem("ghostMenuWeather", JSON.stringify({ data: ctx, ts: Date.now() }));
+        } catch {}
+      },
+      () => {} // permission denied — silently ignore
+    );
+  }, []); // run once per session
+
+  // AI-2: recent order counts — refresh every 5 minutes
+  // BUG-3 fix: guard on restaurant?.id state (not ref) so first fetch runs correctly
+  useEffect(() => {
+    if (!restaurant?.id) return;
+    const restaurantId = restaurant.id; // capture stable value for closure
+    const load = () => fetchRecentOrderCounts(restaurantId).then(setRecentOrderCounts);
+    load();
+    const timer = setInterval(load, 5 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [restaurant?.id]);
+
+  // BUG-1: clicks only — views tracked by IntersectionObserver in ItemCard
   const handleItemClick = useCallback((item: MenuItem) => {
     const updated: MenuItem = { ...item, clicks: item.clicks + 1 };
     setItems(prev => prev.map(i => i.id === item.id ? updated : i));
     incrementClick(item.id, restaurantIdRef.current);
     setSelectedItem(updated);
-  }, []); // No stale closure — we use the ref for restaurantId
+  }, []); // no stale closure — uses ref
 
-  const handleModalClose   = useCallback(() => setSelectedItem(null), []);
-  const handleComboClick   = useCallback((item: MenuItem) => {
+  // BUG-1: called by ItemCard's IntersectionObserver
+  const handleViewItem = useCallback((itemId: number) => {
+    setItems(prev => prev.map(i => i.id === itemId ? { ...i, views: i.views + 1 } : i));
+  }, []);
+
+  const handleModalClose  = useCallback(() => setSelectedItem(null), []);
+  const handleComboClick  = useCallback((item: MenuItem) => {
     setSelectedItem(null);
     setTimeout(() => handleItemClick(item), 200);
   }, [handleItemClick]);
@@ -85,18 +146,19 @@ function CustomerMenuPageInner() {
         guestName={guestName}
         memberCount={memberCount}
         tableNumber={tableNumber}
-        restaurantName={restaurant?.name ?? "Ghost Menu"}
+        restaurantName={restaurant?.name ?? ""}
         restaurantId={restaurant?.id}
+        restaurantSlug={slug}
+        weatherContext={weatherContext}
+        recentOrderCounts={recentOrderCounts}
         onItemClick={handleItemClick}
-        onViewItem={(itemId) => {
-          // Update local views counter without re-opening modal
-          setItems(prev => prev.map(i => i.id === itemId ? { ...i, views: i.views + 1 } : i));
-        }}
+        onViewItem={handleViewItem}
       />
       <ItemModal
         item={selectedItem}
         onClose={handleModalClose}
         onComboItemClick={handleComboClick}
+        restaurantId={restaurant?.id}
       />
     </CartProvider>
   );
@@ -104,12 +166,27 @@ function CustomerMenuPageInner() {
 
 export default function CustomerMenuPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    }>
+    <Suspense fallback={<MenuSkeleton />}>
       <CustomerMenuPageInner />
     </Suspense>
+  );
+}
+
+function MenuSkeleton() {
+  return (
+    <div className="min-h-screen pb-28" style={{ background: "var(--gm-bg)" }}>
+      <div className="sticky top-0 h-16" style={{ background: "rgba(2,6,23,0.9)", borderBottom: "1px solid rgba(255,255,255,0.05)" }} />
+      <div className="max-w-md mx-auto px-4 pt-5 space-y-4">
+        <div className="flex gap-3 overflow-hidden">
+          {[0,1,2,3].map(i => <div key={i} className="flex-shrink-0 w-36 h-32 rounded-2xl animate-pulse" style={{ background: "var(--gm-bg)" }} />)}
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {[0,1,2,3].map(i => <div key={i} className="h-40 rounded-2xl animate-pulse" style={{ background: "var(--gm-bg)" }} />)}
+        </div>
+        <div className="space-y-2">
+          {[0,1,2,3,4].map(i => <div key={i} className="h-20 rounded-2xl animate-pulse" style={{ background: "var(--gm-bg)" }} />)}
+        </div>
+      </div>
+    </div>
   );
 }

@@ -1,25 +1,29 @@
 "use client";
 
-import { FALLBACK_IMAGE, formatPrice } from "@/lib/constants";
-
 import { useEffect } from "react";
 import Image from "next/image";
 import { MenuItem, comboSuggestions, initialMenuItems } from "@/data/menuData";
 import { useCart, lockScroll, unlockScroll } from "@/context/CartContext";
+import { FALLBACK_IMAGE, PREP_LABEL, formatPrice } from "@/lib/constants";
+import { incrementView } from "@/lib/supabase";
 
 interface Props {
   item: MenuItem | null;
   onClose: () => void;
   onComboItemClick?: (item: MenuItem) => void;
+  restaurantId?: string;
 }
 
-export default function ItemModal({ item, onClose, onComboItemClick }: Props) {
+export default function ItemModal({ item, onClose, onComboItemClick, restaurantId }: Props) {
   const { items: cartItems, add, increment, decrement } = useCart();
 
-  // Shared ref-counted scroll lock — safe alongside CartModal
   useEffect(() => {
-    if (item) { lockScroll(); return unlockScroll; }
-  }, [item]);
+    if (item) {
+      lockScroll();
+      incrementView(item.id, restaurantId);
+      return unlockScroll;
+    }
+  }, [item, restaurantId]);
 
   if (!item) return null;
 
@@ -30,94 +34,99 @@ export default function ItemModal({ item, onClose, onComboItemClick }: Props) {
     .map(name => initialMenuItems.find(i => i.name === name))
     .filter(Boolean) as MenuItem[];
 
-  const prepLabel = { fast: "⚡ Quick (5–10 min)", medium: "⏱ ~15 min", slow: "🕐 ~30 min" }[item.prep_time];
-  const prepColor = { fast: "bg-emerald-100 text-emerald-700", medium: "bg-yellow-100 text-yellow-700", slow: "bg-red-100 text-red-600" }[item.prep_time];
+  const prepStyle = {
+    fast:   { background: "var(--gm-success-bg)", border: "1px solid var(--gm-success-border)", color: "#15803D" },
+    medium: { background: "var(--gm-warning-bg)", border: "1px solid var(--gm-warning-border)", color: "#92400E" },
+    slow:   { background: "var(--gm-danger-bg)",  border: "1px solid var(--gm-danger-border)",  color: "#B91C1C" },
+  }[item.prep_time];
 
   const handleAdd = () => add({ id: item.id, name: item.name, price: item.price, image: item.image });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true" aria-label={item.name}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fadeIn" onClick={onClose} />
+    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" }} role="dialog" aria-modal="true" aria-label={item.name}>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}
+        className="animate-fadeIn" onClick={onClose} />
 
-      <div className="relative w-full max-w-md bg-white rounded-t-3xl max-h-[92vh] overflow-y-auto shadow-2xl animate-slideUp">
-        {/* Close */}
+      <div style={{ position: "relative", width: "100%", maxWidth: 480, background: "var(--gm-surface)", borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--gm-shadow-xl)" }}
+        className="animate-slideUp">
+
+        {/* Close button */}
         <button onClick={onClose} aria-label="Close"
-          className="absolute top-3 right-3 z-10 w-8 h-8 bg-black/20 hover:bg-black/30 backdrop-blur-sm rounded-full flex items-center justify-center transition-colors"
-        >
-          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          style={{ position: "absolute", top: 12, right: 12, zIndex: 10, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", background: "rgba(0,0,0,0.35)", border: "none", color: "#fff", fontSize: 18, cursor: "pointer" }}>
+          ×
         </button>
 
         {/* Image */}
-        <div className="relative h-52 w-full bg-stone-200 overflow-hidden rounded-t-3xl">
+        <div style={{ position: "relative", height: 210, background: "var(--gm-bg)", borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: "hidden" }}>
           <Image src={item.image} alt={item.name} fill sizes="448px" className="object-cover" priority
-            onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
+            onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 50%)" }} />
           {item.tag && (
-            <span className={`absolute bottom-3 left-4 px-3 py-1 text-xs font-bold rounded-full shadow ${
-              item.tag.includes("Popular") ? "bg-orange-500 text-white" : "bg-amber-400 text-amber-900"
-            }`}>{item.tag}</span>
+            <span style={{ position: "absolute", bottom: 12, left: 16, padding: "4px 10px", fontSize: 11, fontWeight: 700, borderRadius: 99,
+              ...(item.tag.includes("Popular") ? { background: "var(--gm-primary)", color: "#fff" } : { background: "rgba(251,191,36,0.9)", color: "#78350f" }) }}>
+              {item.tag}
+            </span>
           )}
         </div>
 
-        <div className="p-5">
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <h2 className="font-display text-xl font-bold text-stone-900 leading-snug flex-1">{item.name}</h2>
-            <span className="text-orange-600 font-display text-xl font-bold whitespace-nowrap">{formatPrice(item.price)}</span>
+        <div style={{ padding: 20 }}>
+          {/* Title + price */}
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--gm-text)", lineHeight: 1.2, flex: 1, margin: 0 }}>{item.name}</h2>
+            <span style={{ fontSize: 22, fontWeight: 700, color: "var(--gm-primary)", whiteSpace: "nowrap" }} className="price tabular-nums">
+              {formatPrice(item.price)}
+            </span>
           </div>
 
-          <p className="text-stone-500 text-sm leading-relaxed mb-4">{item.description}</p>
+          <p style={{ fontSize: 14, color: "var(--gm-text-secondary)", lineHeight: 1.6, marginBottom: 16 }}>{item.description}</p>
 
-          <div className="flex flex-wrap gap-2 mb-5">
-            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${prepColor}`}>{prepLabel}</span>
-            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-stone-100 text-stone-600">{item.category}</span>
+          {/* Meta badges */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
+            <span style={{ ...prepStyle, fontSize: 12, fontWeight: 500, padding: "4px 10px", borderRadius: 99 }}>
+              {item.prep_time === "fast" ? "⚡" : item.prep_time === "medium" ? "⏱" : "🕐"} {PREP_LABEL[item.prep_time]}
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 500, padding: "4px 10px", borderRadius: 99, background: "var(--gm-bg)", border: "1px solid var(--gm-border)", color: "var(--gm-text-secondary)" }}>{item.category}</span>
             {item.profit_tag === "high" && (
-              <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">Best value</span>
+              <span style={{ fontSize: 12, fontWeight: 500, padding: "4px 10px", borderRadius: 99, background: "var(--gm-success-bg)", border: "1px solid var(--gm-success-border)", color: "#15803D" }}>Best value</span>
             )}
+            {item.tags?.map(t => (
+              <span key={t} style={{ fontSize: 12, fontWeight: 500, padding: "3px 8px", borderRadius: 99, background: "var(--gm-bg)", border: "1px solid var(--gm-border)", color: "var(--gm-text-secondary)" }}>{t}</span>
+            ))}
           </div>
 
-          {/* Combo suggestion */}
+          {/* Combo suggestions */}
           {comboItems.length > 0 && (
-            <div className="mb-5 bg-orange-50 border border-orange-100 rounded-2xl p-4">
-              <p className="font-display font-bold text-sm text-orange-900 mb-1">🎯 Make it a combo</p>
-              <p className="text-xs text-orange-600 mb-3">Pairs perfectly with:</p>
-              <div className="flex flex-wrap gap-2">
+            <div style={{ marginBottom: 20, background: "#FFF7ED", border: "1px solid #FDBA74", borderRadius: 16, padding: 16 }}>
+              <p style={{ fontSize: 14, fontWeight: 600, color: "#C2410C", marginBottom: 4 }}>🎯 Make it a combo</p>
+              <p style={{ fontSize: 13, color: "#92400E", marginBottom: 12 }}>Pairs perfectly with:</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {comboItems.map(ci => (
                   <button key={ci.id} onClick={() => onComboItemClick?.(ci)}
-                    className="flex items-center gap-1.5 bg-white border border-orange-200 rounded-xl px-2.5 py-1.5 text-xs font-medium text-orange-800 hover:bg-orange-100 active:scale-95 transition-all"
-                  >
+                    style={{ display: "flex", alignItems: "center", gap: 6, borderRadius: 10, padding: "8px 12px", fontSize: 13, fontWeight: 500, background: "var(--gm-surface)", border: "1px solid var(--gm-border)", color: "var(--gm-text)", cursor: "pointer" }}>
                     <span>{ci.name}</span>
-                    <span className="text-orange-500 font-bold">+{formatPrice(ci.price)}</span>
+                    <span style={{ fontWeight: 700, color: "var(--gm-primary)" }}>+{formatPrice(ci.price)}</span>
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Add to cart CTA */}
+          {/* CTA */}
           {qty === 0 ? (
-            <button onClick={handleAdd}
-              className="w-full py-3.5 bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-white font-display font-bold rounded-2xl text-sm transition-colors shadow-md shadow-orange-200"
-            >
+            <button onClick={handleAdd} className="gm-btn-primary" style={{ width: "100%", height: 52, fontSize: 15 }}>
               Add to Cart · {formatPrice(item.price)}
             </button>
           ) : (
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-3 flex-1 bg-stone-50 rounded-2xl px-4 py-3">
-                <button onClick={() => decrement(item.id)}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-white border border-stone-200 text-stone-700 font-bold hover:bg-stone-100 active:scale-90 transition-all"
-                >−</button>
-                <span className="flex-1 text-center font-display font-bold text-stone-900">{qty} in cart</span>
-                <button onClick={() => increment(item.id)}
-                  className="w-8 h-8 flex items-center justify-center rounded-xl bg-orange-500 text-white font-bold hover:bg-orange-400 active:scale-90 transition-all"
-                >+</button>
-              </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--gm-bg)", borderRadius: 16, padding: "12px 16px" }}>
+              <button onClick={() => decrement(item.id)}
+                style={{ width: 40, height: 40, borderRadius: 12, border: "1px solid var(--gm-border)", background: "var(--gm-surface)", color: "var(--gm-text)", fontSize: 18, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+              <span style={{ flex: 1, textAlign: "center", fontSize: 15, fontWeight: 700, color: "var(--gm-text)" }} className="tabular-nums">{qty} in cart</span>
+              <button onClick={() => increment(item.id)}
+                style={{ width: 40, height: 40, borderRadius: 12, border: "none", background: "var(--gm-primary)", color: "#fff", fontSize: 18, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(223,88,48,0.3)" }}>+</button>
             </div>
           )}
 
-          <button onClick={onClose}
-            className="w-full mt-3 py-3 bg-stone-100 hover:bg-stone-200 text-stone-600 font-semibold rounded-2xl text-sm transition-colors"
-          >
+          <button onClick={onClose} style={{ width: "100%", marginTop: 12, height: 44, borderRadius: 14, border: "1px solid var(--gm-border)", background: "transparent", color: "var(--gm-text-secondary)", fontSize: 14, cursor: "pointer" }}>
             Back to Menu
           </button>
         </div>

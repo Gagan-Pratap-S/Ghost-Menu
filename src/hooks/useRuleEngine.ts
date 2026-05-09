@@ -1,8 +1,6 @@
 import { useCallback } from "react";
 import { MenuItem } from "@/data/menuData";
 
-// ─── Pure functions — defined outside hook so they're never recreated ─────────
-
 function getMealPeriod(): "breakfast" | "lunch" | "dinner" | "snacks" {
   const h = new Date().getHours();
   if (h >= 6  && h < 12) return "breakfast";
@@ -18,33 +16,29 @@ const TIME_BOOST_MAP: Record<string, string[]> = {
   snacks:    ["Starters", "Beverages", "Desserts"],
 };
 
-export function calculateScore(
-  item: MenuItem,
-  kitchenStatus: "normal" | "busy",
-  viewedItemIds: number[],
-  cartHistoryIds: number[] = []
-): number {
+interface ScoreContext {
+  kitchenStatus: "normal" | "busy";
+  viewedItemIds: number[];
+  cartHistoryIds: number[];
+  memberCount: number;
+  weatherContext?: { temp: number; isRaining: boolean };
+}
+
+function calculateScore(item: MenuItem, ctx: ScoreContext): number {
   let score = 0;
 
-  // CTR signal — only meaningful once views bug is fixed (views via IntersectionObserver)
-  const ctr = item.views > 0 ? item.clicks / item.views : 0;
-  score += Math.min(ctr, 1) * 20;
-
-  // Raw click popularity (secondary signal)
-  score += Math.min(item.clicks / 200, 1) * 15;
+  // Primary: clicks normalised 0→30
+  score += Math.min(item.clicks / 200, 1) * 30;
 
   // Profit
   if (item.profit_tag === "high")   score += 12;
   else if (item.profit_tag === "medium") score += 5;
 
-  // Featured
   if (item.featured) score += 6;
-
-  // Combos boost
   if (item.category === "Combos") score += 10;
 
-  // Kitchen mode — busy kitchen boosts fast items
-  if (kitchenStatus === "busy") {
+  // Kitchen mode
+  if (ctx.kitchenStatus === "busy") {
     if (item.prep_time === "fast") score += 15;
     if (item.prep_time === "slow") score -= 15;
   }
@@ -53,31 +47,34 @@ export function calculateScore(
   const period = getMealPeriod();
   if (TIME_BOOST_MAP[period]?.includes(item.category)) score += 10;
 
-  // Return-visit personalisation: items in cart history get a strong boost
-  if (cartHistoryIds.includes(item.id)) score += 12;
-  // Previously viewed gets a lighter nudge
-  if (viewedItemIds.includes(item.id) && !cartHistoryIds.includes(item.id)) score += 4;
+  // REC-1: personalisation — cart history > views
+  if (ctx.cartHistoryIds.includes(item.id)) score += 12;
+  else if (ctx.viewedItemIds.includes(item.id)) score += 4;
 
-  // Freshness boost for new/undiscovered items
+  // REC-2: party-size aware
+  const isSharing = item.category === "Combos" || item.name.toLowerCase().includes("combo");
+  if (ctx.memberCount > 2 && isSharing) score += 8;
+  if (ctx.memberCount > 3 && isSharing) score += 6;
+  if (ctx.memberCount === 1 && item.prep_time === "fast") score += 5;
+
+  // REC-4: weather-aware
+  if (ctx.weatherContext) {
+    const { temp, isRaining } = ctx.weatherContext;
+    if (temp > 32 && (item.category === "Beverages" || item.name.toLowerCase().includes("cold"))) score += 10;
+    if (isRaining && (item.category === "Beverages" || item.name.toLowerCase().includes("chai") || item.name.toLowerCase().includes("soup"))) score += 12;
+  }
+
+  // Freshness
   if (item.views + item.clicks < 30) score += 6;
 
-  // Decay — high views, low CTR means poor conversion; demote
-  if (item.views > 80 && ctr < 0.08) score -= 10;
+  // Decay
+  if (item.views > 80 && item.clicks / item.views < 0.08) score -= 10;
 
   return score;
 }
 
-function _sortByRules(
-  items: MenuItem[],
-  kitchenStatus: "normal" | "busy",
-  viewedItemIds: number[],
-  cartHistoryIds: number[] = []
-): MenuItem[] {
-  return [...items].sort(
-    (a, b) =>
-      calculateScore(b, kitchenStatus, viewedItemIds, cartHistoryIds) -
-      calculateScore(a, kitchenStatus, viewedItemIds, cartHistoryIds)
-  );
+function _sortByRules(items: MenuItem[], ctx: ScoreContext): MenuItem[] {
+  return [...items].sort((a, b) => calculateScore(b, ctx) - calculateScore(a, ctx));
 }
 
 function _getCustomerTag(item: MenuItem): string | null {
@@ -86,26 +83,18 @@ function _getCustomerTag(item: MenuItem): string | null {
   return null;
 }
 
-function _getQualityIndicators(
-  items: MenuItem[]
-): Record<number, { label: string; suggestion: string } | null> {
+function _getQualityIndicators(items: MenuItem[]): Record<number, { label: string; suggestion: string } | null> {
   const out: Record<number, { label: string; suggestion: string } | null> = {};
   for (const item of items) {
     const ctr = item.views > 0 ? item.clicks / item.views : 0;
-    if (item.views > 100 && ctr < 0.15) {
-      out[item.id] = { label: "⚠️ Low conversion", suggestion: "Improve image or rename" };
-    } else if (item.profit_tag === "high" && item.views < 50) {
-      out[item.id] = { label: "📈 Promote this", suggestion: "High-profit, low visibility — feature it" };
-    } else if (item.clicks > 50 && item.views < 150) {
-      out[item.id] = { label: "✨ High performer", suggestion: "Strong CTR — consider featuring" };
-    } else {
-      out[item.id] = null;
-    }
+    if (item.views > 100 && ctr < 0.15) out[item.id] = { label: "⚠️ Low conversion", suggestion: "Improve image or rename" };
+    else if (item.profit_tag === "high" && item.views < 50) out[item.id] = { label: "📈 Promote this", suggestion: "High-profit, low visibility" };
+    else if (item.clicks > 50 && item.views < 150) out[item.id] = { label: "✨ High performer", suggestion: "Consider featuring" };
+    else out[item.id] = null;
   }
   return out;
 }
 
-// ─── Hook — just stable references via useCallback ───────────────────────────
 export function useRuleEngine() {
   const sortByRules = useCallback(_sortByRules, []);
   const getCustomerTag = useCallback(_getCustomerTag, []);

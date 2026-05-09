@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useCart, lockScroll, unlockScroll } from "@/context/CartContext";
 import { createOrder } from "@/lib/supabase";
@@ -19,6 +20,7 @@ type PlaceState = "idle" | "placing" | "success" | "error";
 
 export default function CartModal({ open, onClose, restaurantId, guestName, memberCount, tableNumber }: Props) {
   const { items, totalItems, totalPrice, increment, decrement, remove, clear } = useCart();
+  const router = useRouter();
 
   const [placeState, setPlaceState] = useState<PlaceState>("idle");
   const [orderId, setOrderId]       = useState<string | null>(null);
@@ -49,7 +51,7 @@ export default function CartModal({ open, onClose, restaurantId, guestName, memb
     if (submitting.current || !isIdle) return;
     if (!restaurantId) { setOrderError("Restaurant not identified. Please scan the QR code again."); return; }
     if (items.length === 0) { setOrderError("Your cart is empty."); return; }
-    if (totalPrice <= 0) { setOrderError("Invalid order total."); return; }
+    if (totalPrice <= 0)    { setOrderError("Invalid order total."); return; }
 
     submitting.current = true;
     setPlaceState("placing");
@@ -70,94 +72,120 @@ export default function CartModal({ open, onClose, restaurantId, guestName, memb
       submitting.current = false;
       return;
     }
-
-    // Double-pulse haptic for order success
-    if (typeof navigator !== "undefined") navigator.vibrate?.([30, 10, 30]);
-
-    setOrderId(order?.id ?? null);
     setPlaceState("success");
+    if (typeof navigator !== "undefined") navigator.vibrate?.([30, 10, 30]);
     clear();
+    if (order?.id) {
+      setTimeout(() => {
+        onClose();
+        router.push(`/order/${order.id}`);
+      }, 700);
+    } else {
+      setOrderId(null);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fadeIn" onClick={onClose} />
+    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" }} role="dialog" aria-modal="true">
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}
+        className="animate-fadeIn" onClick={onClose} />
 
-      <div className="relative w-full max-w-md bg-white rounded-t-3xl shadow-2xl animate-slideUp max-h-[88vh] flex flex-col">
-        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-stone-100 flex-shrink-0">
+      <div style={{ position: "relative", width: "100%", maxWidth: 480, background: "var(--gm-surface)", borderTopLeftRadius: 28, borderTopRightRadius: 28, boxShadow: "var(--gm-shadow-xl)", maxHeight: "88vh", display: "flex", flexDirection: "column" }}
+        className="animate-slideUp">
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "20px 20px 16px", borderBottom: "1px solid var(--gm-border)", flexShrink: 0 }}>
           <div>
-            <h2 className="font-display font-bold text-lg text-stone-900">
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--gm-text)", margin: 0 }}>
               {isSuccess ? "Order Placed! 🎉" : "Your Cart"}
             </h2>
-            <p className="text-xs text-stone-400 mt-0.5">
+            <p style={{ fontSize: 13, color: "var(--gm-text-secondary)", marginTop: 2 }}>
               {isSuccess
                 ? "Kitchen is preparing your order"
                 : tableNumber && tableNumber !== "QR"
                   ? `${totalItems} item${totalItems !== 1 ? "s" : ""} · Table ${tableNumber}`
-                  : `${totalItems} item${totalItems !== 1 ? "s" : ""}`
-              }
+                  : `${totalItems} item${totalItems !== 1 ? "s" : ""}`}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {items.length > 0 && isIdle && (
-              <button onClick={clear} className="text-xs text-red-400 hover:text-red-600 font-medium px-2 py-1 rounded-lg hover:bg-red-50 transition-colors">Clear all</button>
+              <button onClick={clear}
+                style={{ fontSize: 13, fontWeight: 500, padding: "4px 10px", borderRadius: 8, color: "var(--gm-danger)", background: "var(--gm-danger-bg)", border: "none", cursor: "pointer" }}>
+                Clear all
+              </button>
             )}
-            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors">×</button>
+            <button onClick={onClose}
+              style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", background: "var(--gm-bg)", border: "none", color: "var(--gm-text-secondary)", fontSize: 18, cursor: "pointer" }}>
+              ×
+            </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-5 py-3">
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
           {isSuccess ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div style={{ textAlign: "center", padding: "40px 0" }}>
+              <div style={{ width: 60, height: 60, borderRadius: "50%", background: "var(--gm-success-bg)", border: "1px solid var(--gm-success-border)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                <svg width="28" height="28" style={{ color: "var(--gm-success)" }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <p className="font-display font-bold text-stone-900 text-lg mb-1">Order received!</p>
-              <p className="text-stone-500 text-sm leading-relaxed">
-                Your food is being prepared.{tableNumber && tableNumber !== "QR" ? ` We'll bring it to Table ${tableNumber}.` : " We'll bring it to your table."}
+              <p style={{ fontSize: 18, fontWeight: 700, color: "var(--gm-text)", marginBottom: 8 }}>Order received!</p>
+              <p style={{ fontSize: 14, color: "var(--gm-text-secondary)", lineHeight: 1.6 }}>
+                {tableNumber && tableNumber !== "QR" ? `We'll bring it to Table ${tableNumber}.` : "We'll bring it to your table shortly."}
               </p>
-              {orderId && <p className="text-xs text-stone-400 mt-3 font-mono">Order #{orderId.slice(0, 8).toUpperCase()}</p>}
-              <button onClick={onClose} className="mt-6 w-full py-3.5 bg-stone-900 hover:bg-stone-800 text-white font-display font-bold rounded-2xl text-sm transition-colors">Back to Menu</button>
+              {orderId && <p style={{ fontSize: 12, color: "var(--gm-text-tertiary)", marginTop: 12, fontFamily: "monospace" }}>#{orderId.slice(0, 8).toUpperCase()}</p>}
+              <button onClick={onClose} style={{ marginTop: 24, width: "100%", height: 48, borderRadius: 14, border: "1px solid var(--gm-border)", background: "var(--gm-bg)", color: "var(--gm-text)", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>Back to Menu</button>
             </div>
           ) : isError ? (
-            <div className="text-center py-12">
-              <p className="text-3xl mb-3">😕</p>
-              <p className="font-display font-semibold text-stone-700">Couldn't place order</p>
-              {orderError && <p className="text-xs text-red-500 mt-2 mb-1">{orderError}</p>}
-              <p className="text-xs text-stone-400 mt-1 mb-5">Check connection and try again</p>
-              <button onClick={() => { setPlaceState("idle"); setOrderError(null); submitting.current = false; }} className="px-6 py-2.5 bg-orange-500 text-white font-semibold rounded-xl text-sm">Try Again</button>
+            <div style={{ textAlign: "center", padding: "40px 0" }}>
+              <p style={{ fontSize: 32, marginBottom: 12 }}>😕</p>
+              <p style={{ fontSize: 16, fontWeight: 600, color: "var(--gm-text)", marginBottom: 8 }}>Couldn't place order</p>
+              {orderError && (
+                <div style={{ background: "var(--gm-danger-bg)", border: "1px solid var(--gm-danger-border)", borderRadius: 12, padding: "12px 16px", marginBottom: 12 }}>
+                  <p style={{ fontSize: 13, color: "var(--gm-danger)" }}>{orderError}</p>
+                </div>
+              )}
+              <p style={{ fontSize: 13, color: "var(--gm-text-secondary)", marginBottom: 20 }}>Check your connection and try again</p>
+              <button onClick={() => { setPlaceState("idle"); setOrderError(null); submitting.current = false; }} className="gm-btn-primary" style={{ padding: "0 24px" }}>
+                Try Again
+              </button>
             </div>
           ) : items.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-4xl mb-3">🛒</p>
-              <p className="font-display font-semibold text-stone-600">Cart is empty</p>
-              <p className="text-xs text-stone-400 mt-1">Add items from the menu</p>
+            <div style={{ textAlign: "center", padding: "64px 0" }}>
+              <p style={{ fontSize: 40, marginBottom: 12 }}>🛒</p>
+              <p style={{ fontSize: 16, fontWeight: 600, color: "var(--gm-text)" }}>Cart is empty</p>
+              <p style={{ fontSize: 13, color: "var(--gm-text-secondary)", marginTop: 4 }}>Add items from the menu</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {orderError && (
-                <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
-                  <p className="text-red-600 text-xs font-medium">{orderError}</p>
+                <div style={{ background: "var(--gm-danger-bg)", border: "1px solid var(--gm-danger-border)", borderRadius: 12, padding: "12px 16px" }}>
+                  <p style={{ fontSize: 13, color: "var(--gm-danger)", fontWeight: 500 }}>{orderError}</p>
                 </div>
               )}
               {items.map(item => (
-                <div key={item.id} className="flex items-center gap-3 bg-stone-50 rounded-2xl p-3">
-                  <div className="relative w-14 h-14 flex-shrink-0 rounded-xl overflow-hidden bg-stone-200">
-                    <Image src={item.image} alt={item.name} fill sizes="56px" className="object-cover" loading="lazy"
-                      onError={(e) => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
+                <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--gm-bg)", borderRadius: 14, padding: 12 }}>
+                  <div style={{ position: "relative", width: 56, height: 56, borderRadius: 12, overflow: "hidden", flexShrink: 0, background: "var(--gm-border)" }}>
+                    <Image src={item.image} alt={item.name} fill sizes="56px" className="object-cover"
+                      onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-display font-semibold text-stone-900 text-sm line-clamp-1">{item.name}</p>
-                    <p className="text-orange-600 font-bold text-sm">{formatPrice(item.price * item.quantity)}</p>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 14, fontWeight: 500, color: "var(--gm-text)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: "var(--gm-primary)", margin: 0 }} className="price tabular-nums">
+                      {formatPrice(item.price * item.quantity)}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <button onClick={() => decrement(item.id)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-white border border-stone-200 text-stone-700 font-bold text-sm hover:bg-stone-100 active:scale-90 transition-all">−</button>
-                    <span className="font-display font-bold text-sm text-stone-900 w-5 text-center">{item.quantity}</span>
-                    <button onClick={() => increment(item.id)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-orange-500 text-white font-bold text-sm hover:bg-orange-400 active:scale-90 transition-all">+</button>
-                    <button onClick={() => remove(item.id)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-red-50 text-red-400 hover:bg-red-100 ml-1 active:scale-90 transition-all" aria-label={`Remove ${item.name}`}>
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                    <button onClick={() => decrement(item.id)}
+                      style={{ width: 28, height: 28, borderRadius: 9, border: "1px solid var(--gm-border)", background: "var(--gm-surface)", color: "var(--gm-text)", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: "var(--gm-text)", width: 20, textAlign: "center" }} className="tabular-nums">{item.quantity}</span>
+                    <button onClick={() => increment(item.id)}
+                      style={{ width: 28, height: 28, borderRadius: 9, border: "none", background: "var(--gm-primary)", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+                    <button onClick={() => remove(item.id)}
+                      style={{ width: 28, height: 28, borderRadius: 9, border: "none", background: "var(--gm-danger-bg)", color: "var(--gm-danger)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginLeft: 2 }}
+                      aria-label={`Remove ${item.name}`}>
+                      <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                     </button>
@@ -168,25 +196,22 @@ export default function CartModal({ open, onClose, restaurantId, guestName, memb
           )}
         </div>
 
+        {/* Footer */}
         {items.length > 0 && (isIdle || isPlacing) && (
-          <div className="px-5 pb-6 pt-4 border-t border-stone-100 flex-shrink-0 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-display font-semibold text-stone-700">Total</span>
-              <span className="font-display font-bold text-xl text-stone-900">{formatPrice(totalPrice)}</span>
+          <div style={{ padding: "16px 20px 24px", borderTop: "1px solid var(--gm-border)", flexShrink: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+              <span style={{ fontSize: 16, fontWeight: 600, color: "var(--gm-text)" }}>Total</span>
+              <span style={{ fontSize: 22, fontWeight: 700, color: "var(--gm-text)" }} className="price tabular-nums">{formatPrice(totalPrice)}</span>
             </div>
-            <button
-              onClick={handlePlaceOrder}
-              disabled={isPlacing}
-              className="w-full py-4 bg-orange-500 hover:bg-orange-400 active:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-display font-bold rounded-2xl text-sm transition-colors shadow-md shadow-orange-100"
-            >
+            <button onClick={handlePlaceOrder} disabled={isPlacing} className="gm-btn-primary" style={{ width: "100%", height: 52, fontSize: 15 }}>
               {isPlacing ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
                   Placing order…
                 </span>
               ) : `Place Order · ${formatPrice(totalPrice)}`}
             </button>
-            <p className="text-xs text-stone-400 text-center">Your order goes straight to the kitchen</p>
+            <p style={{ fontSize: 12, color: "var(--gm-text-tertiary)", textAlign: "center", marginTop: 10 }}>Your order goes straight to the kitchen</p>
           </div>
         )}
       </div>
