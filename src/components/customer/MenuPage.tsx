@@ -4,9 +4,8 @@ import { useState, useCallback, memo, useEffect, useMemo } from "react";
 import { MenuItem } from "@/data/menuData";
 import ItemCard from "./ItemCard";
 import CategoryFilter from "./CategoryFilter";
-import CartButton from "./CartButton";
+import CustomerBottomNav, { CustomerTab } from "@/components/navigation/CustomerBottomNav";
 import { useMenuEngine } from "@/hooks/useMenuEngine";
-import { fetchTableOrders, Order } from "@/lib/supabase";
 import { formatPrice } from "@/lib/constants";
 
 interface WeatherContext { temp: number; isRaining: boolean; }
@@ -62,8 +61,8 @@ export default function MenuPage({
   const [searchOpen, setSearchOpen]         = useState(false);
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeTags, setActiveTags]         = useState<string[]>([]);
-  const [categoryExpanded, setCategoryExpanded] = useState(false);
-  const [tableOrders, setTableOrders]       = useState<Order[]>([]);
+  const [foodFilter, setFoodFilter]         = useState<"all" | "veg" | "non_veg">("all");
+  const [activeTab, setActiveTab]           = useState<CustomerTab>("menu");
   const [isOnline, setIsOnline]             = useState(true);
 
   useEffect(() => {
@@ -75,15 +74,14 @@ export default function MenuPage({
     return () => { window.removeEventListener("online", up); window.removeEventListener("offline", down); };
   }, []);
 
-  useEffect(() => {
-    if (restaurantId && tableNumber && tableNumber !== "QR") {
-      fetchTableOrders(restaurantId, tableNumber).then(setTableOrders);
-    }
-  }, [restaurantId, tableNumber]);
 
-  const { topPicks, quickPicks, fullMenu, categories } = useMenuEngine(
+  const { topPicks, quickPicks, fullMenu: rawFullMenu, categories } = useMenuEngine(
     items, kitchenStatus, activeCategory, searchTerm, memberCount, activeTags, weatherContext
   );
+
+  // Apply veg/non-veg filter
+  const fullMenu = foodFilter === "all" ? rawFullMenu
+    : rawFullMenu.filter(i => i.food_type === foodFilter);
 
   const categoryCounts = useMemo(() => {
     const available = items.filter(i => i.available);
@@ -99,8 +97,7 @@ export default function MenuPage({
   const showSections = !searchTerm && activeCategory === "All" && activeTags.length === 0;
 
   const hour = new Date().getHours();
-  const timeContext = hour < 12 ? "Morning picks" : hour < 16 ? "Lunch specials" : hour < 21 ? "Evening picks" : "Late night";
-  const tableItemNames = [...new Set(tableOrders.flatMap(o => o.items.map(i => i.name)))].slice(0, 3);
+  const timeContext = hour < 12 ? "Morning picks" : hour < 16 ? "Lunch specials" : hour < 17 ? "Afternoon" : hour < 21 ? "Evening picks" : "Late night";
   const allTags = [...new Set(items.filter(i => i.available).flatMap(i => i.tags ?? []))];
 
   const greeting = (() => {
@@ -162,12 +159,6 @@ export default function MenuPage({
         </div>
       ) : (
         <div style={{ maxWidth: 480, margin: "0 auto" }}>
-          {/* Social proof */}
-          {tableItemNames.length > 0 && showSections && (
-            <div style={{ margin: "16px 16px 0", borderRadius: 12, padding: "8px 14px", background: "#FFF7ED", border: "1px solid #FDBA74" }}>
-              <p style={{ fontSize: 13, color: "#C2410C" }}>👥 Others at Table {tableNumber} ordered: {tableItemNames.join(", ")}</p>
-            </div>
-          )}
 
           {/* Quick Picks */}
           {quickPicks.length > 0 && showSections && (
@@ -205,6 +196,29 @@ export default function MenuPage({
             </section>
           )}
 
+          {/* Veg / Non-Veg filter pills */}
+          <div style={{ display: "flex", gap: 8, padding: "8px 16px 0" }}>
+            {(["all", "veg", "non_veg"] as const).map(f => {
+              const label = f === "all" ? "All" : f === "veg" ? "🟢 Veg" : "🔴 Non-Veg";
+              const isActive = foodFilter === f;
+              return (
+                <button key={f} onClick={() => setFoodFilter(f)}
+                  style={{
+                    flexShrink: 0, padding: "5px 14px", borderRadius: 99, fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.15s",
+                    ...(isActive
+                      ? f === "veg"
+                        ? { background: "#ECFDF5", color: "#15803D", border: "1px solid #BBF7D0" }
+                        : f === "non_veg"
+                          ? { background: "#FEF2F2", color: "#B91C1C", border: "1px solid #FECACA" }
+                          : { background: "var(--gm-primary)", color: "#fff", border: "1px solid var(--gm-primary)" }
+                      : { background: "var(--gm-surface)", color: "var(--gm-text-secondary)", border: "1px solid var(--gm-border)" }),
+                  }}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
           {/* Dietary tags */}
           {allTags.length > 0 && (
             <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "16px 16px 4px" }} className="scrollbar-none">
@@ -225,21 +239,12 @@ export default function MenuPage({
             </div>
           )}
 
-          {/* Category filter */}
+          {/* Category filter — always visible, no collapsible */}
           <div style={{ position: "sticky", top: 56, zIndex: 20, background: "var(--gm-surface)", borderBottom: "1px solid var(--gm-border)", marginTop: 8 }}>
-            {!categoryExpanded && activeCategory === "All" && showSections ? (
-              <div style={{ padding: "8px 16px" }}>
-                <button onClick={() => setCategoryExpanded(true)}
-                  style={{ width: "100%", padding: "8px 0", borderRadius: 10, fontSize: 13, fontWeight: 500, color: "var(--gm-text-secondary)", background: "var(--gm-bg)", border: "1px solid var(--gm-border)", cursor: "pointer" }}>
-                  Browse all categories ▾
-                </button>
-              </div>
-            ) : (
-              <MemoizedCategoryFilter categories={categories} activeCategory={activeCategory}
-                categoryCounts={categoryCounts}
-                onCategoryChange={c => { setActiveCategory(c); setSearchTerm(""); setSearchOpen(false); if (c !== "All") setCategoryExpanded(false); }}
-              />
-            )}
+            <MemoizedCategoryFilter categories={categories} activeCategory={activeCategory}
+              categoryCounts={categoryCounts}
+              onCategoryChange={c => { setActiveCategory(c); setSearchTerm(""); setSearchOpen(false); }}
+            />
           </div>
 
           {/* Full menu */}
@@ -280,7 +285,14 @@ export default function MenuPage({
         </div>
       )}
 
-      <CartButton restaurantId={restaurantId} guestName={guestName} memberCount={memberCount} tableNumber={tableNumber} />
+      <CustomerBottomNav
+        restaurantId={restaurantId}
+        guestName={guestName}
+        memberCount={memberCount}
+        tableNumber={tableNumber}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+      />
     </div>
   );
 }

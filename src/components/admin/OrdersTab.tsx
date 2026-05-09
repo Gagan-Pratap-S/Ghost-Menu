@@ -91,8 +91,8 @@ function OrderCard({ order, isNew, onStatusChange }: OrderCardProps) {
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <p style={{ fontSize: 14, fontWeight: 600, color: "var(--gm-text)", margin: 0 }}>{order.guest_name}</p>
             {order.table_number && order.table_number !== "QR" && (
-              <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 99, background: "var(--gm-bg)", border: "1px solid var(--gm-border)", color: "var(--gm-text-secondary)" }}>
-                Table {order.table_number}
+              <span style={{ fontSize: 12, fontWeight: 700, padding: "2px 10px", borderRadius: 99, background: "var(--gm-primary)", color: "#fff" }}>
+                🪑 Table {order.table_number}
               </span>
             )}
             <span style={{ fontSize: 12, color: "var(--gm-text-tertiary)" }}>· {order.member_count} pax</span>

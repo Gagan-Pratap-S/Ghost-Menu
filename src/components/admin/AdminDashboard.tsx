@@ -9,8 +9,7 @@ import { Restaurant, updateKitchenStatus } from "@/lib/supabase";
 import { formatPrice } from "@/lib/constants";
 import { useAuth } from "@/context/AuthContext";
 import { useRuleEngine } from "@/hooks/useRuleEngine";
-import ItemForm from "./ItemForm";
-import OrdersTab from "./OrdersTab";
+import AdminBottomNav from "@/components/navigation/AdminBottomNav";
 
 interface Props {
   items: MenuItem[];
@@ -21,7 +20,7 @@ interface Props {
   onDelete: (id: number) => Promise<void>;
 }
 
-type Tab = "overview" | "items" | "orders";
+type Tab = "overview";
 
 function StatCard({ value, label, sub, accent = "var(--gm-primary)" }: { value: string; label: string; sub?: string; accent?: string }) {
   return (
@@ -41,12 +40,7 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
   const router = useRouter();
   const { logout, session } = useAuth();
 
-  const [tab, setTab]                             = useState<Tab>("overview");
-  const [searchTerm, setSearchTerm]               = useState("");
   const [kitchenStatus, setKitchenStatus]         = useState<"normal" | "busy">("normal");
-  const [editingItem, setEditingItem]             = useState<MenuItem | null>(null);
-  const [showAddForm, setShowAddForm]             = useState(false);
-  const [deleteConfirm, setDeleteConfirm]         = useState<number | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const { getQualityIndicators } = useRuleEngine();
@@ -60,19 +54,13 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
   const needsAttention = useMemo(() => items.filter(i => i.views > 100 && i.clicks / i.views < 0.15), [items]);
   const promoteItems   = useMemo(() => items.filter(i => i.profit_tag === "high" && i.views < 50), [items]);
 
-  const filteredItems = useMemo(() => {
-    if (!searchTerm.trim()) return items;
-    const t = searchTerm.toLowerCase();
-    return items.filter(i => i.name.toLowerCase().includes(t) || i.category.toLowerCase().includes(t));
-  }, [items, searchTerm]);
 
-  const handleUpdate = async (id: number, data: Partial<MenuItem>) => { await onUpdate(id, data); setEditingItem(null); };
+  const handleUpdate = async (id: number, data: Partial<MenuItem>) => { await onUpdate(id, data); };
   const handleKitchenToggle = useCallback(() => {
     const next = kitchenStatus === "normal" ? "busy" : "normal";
     setKitchenStatus(next);
     if (restaurant?.id) updateKitchenStatus(restaurant.id, next === "busy");
   }, [kitchenStatus, restaurant?.id]);
-  const handleAdd    = async (data: Omit<MenuItem, "id" | "clicks" | "views" | "tag">) => { await onAdd(data); setShowAddForm(false); };
   const handleLogout = async () => { await logout(); router.replace("/admin/login"); };
 
   return (
@@ -111,23 +99,20 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
             </div>
           </div>
 
-          {/* Tab bar */}
-          <div style={{ display: "flex", gap: 4, marginTop: 14, background: "var(--gm-bg)", borderRadius: 12, padding: 4 }}>
-            {(["overview", "items", "orders"] as Tab[]).map(t => (
-              <button key={t} onClick={() => setTab(t)} style={{ flex: 1, padding: "7px 0", borderRadius: 9, border: "none", fontSize: 13, fontWeight: 500, cursor: "pointer", transition: "all 0.15s", background: tab === t ? "var(--gm-surface)" : "transparent", color: tab === t ? "var(--gm-text)" : "var(--gm-text-secondary)", boxShadow: tab === t ? "var(--gm-shadow-sm)" : "none" }}>
-                {t === "overview" ? "Overview" : t === "items" ? `Menu (${items.length})` : "Orders"}
-              </button>
-            ))}
+          {/* Quick links */}
+          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+            <a href="/admin/menu" style={{ flex: 1, textAlign: "center", padding: "7px 0", borderRadius: 9, border: "1px solid var(--gm-border)", fontSize: 13, fontWeight: 500, color: "var(--gm-text-secondary)", textDecoration: "none", background: "var(--gm-bg)" }}>Menu ({items.length})</a>
+            <a href="/admin/orders" style={{ flex: 1, textAlign: "center", padding: "7px 0", borderRadius: 9, border: "1px solid var(--gm-border)", fontSize: 13, fontWeight: 500, color: "var(--gm-text-secondary)", textDecoration: "none", background: "var(--gm-bg)" }}>Live Orders</a>
           </div>
         </div>
       </header>
 
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: "20px 20px 80px" }}>
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "20px 20px 120px" }}>
         {loading ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {[0,1,2,3].map(i => <div key={i} className="animate-skeleton" style={{ height: 80, borderRadius: 20 }} />)}
           </div>
-        ) : tab === "overview" ? (
+        ) : (
           <div className="animate-fadeIn" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {/* Kitchen mode */}
             <div className="gm-card" style={{ padding: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -212,75 +197,14 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
               </div>
             )}
           </div>
-        ) : tab === "items" ? (
-          <div className="animate-fadeIn" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ display: "flex", gap: 8 }}>
-              <div style={{ position: "relative", flex: 1 }}>
-                <input className="gm-input" type="text" placeholder="Search items…" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} style={{ paddingLeft: 38, height: 44, fontSize: 14 }} />
-                <svg style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--gm-text-tertiary)" }} width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                {searchTerm && <button onClick={() => setSearchTerm("")} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: 18, color: "var(--gm-text-tertiary)", cursor: "pointer" }}>×</button>}
-              </div>
-              <button onClick={() => { setShowAddForm(true); setEditingItem(null); }} className="gm-btn-primary" style={{ height: 44, padding: "0 16px", fontSize: 13, flexShrink: 0 }}>
-                + Add Dish
-              </button>
-            </div>
-
-            {searchTerm && <p style={{ fontSize: 13, color: "var(--gm-text-secondary)" }}>{filteredItems.length} result{filteredItems.length !== 1 ? "s" : ""}</p>}
-
-            {showAddForm && <ItemForm mode="add" onSave={handleAdd} onCancel={() => setShowAddForm(false)} />}
-
-            {filteredItems.map(item => (
-              <div key={item.id}>
-                {editingItem?.id === item.id ? (
-                  <ItemForm mode="edit" item={editingItem} onSave={data => handleUpdate(item.id, data)} onCancel={() => setEditingItem(null)} />
-                ) : (
-                  <AdminItemRow item={item} indicator={indicators[item.id]}
-                    onEdit={() => setEditingItem(item)}
-                    onToggleAvailable={() => onUpdate(item.id, { available: !item.available })}
-                    onToggleFeatured={() => onUpdate(item.id, { featured: !item.featured })}
-                    onDelete={() => setDeleteConfirm(item.id)}
-                  />
-                )}
-                {deleteConfirm === item.id && (
-                  <div className="animate-slideUp" style={{ marginTop: 8, background: "var(--gm-danger-bg)", border: "1px solid var(--gm-danger-border)", borderRadius: 16, padding: 16 }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: "var(--gm-text)", marginBottom: 4 }}>Delete "{item.name}"?</p>
-                    <p style={{ fontSize: 13, color: "var(--gm-danger)", marginBottom: 12 }}>This cannot be undone.</p>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={() => setDeleteConfirm(null)} className="gm-btn-secondary" style={{ flex: 1, height: 40, fontSize: 13 }}>Cancel</button>
-                      <button onClick={async () => { await onDelete(item.id); setDeleteConfirm(null); }}
-                        style={{ flex: 1, height: 40, borderRadius: 10, border: "none", background: "var(--gm-danger)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {filteredItems.length === 0 && !showAddForm && (
-              <div style={{ textAlign: "center", padding: "64px 20px" }}>
-                <p style={{ fontSize: 32, marginBottom: 8 }}>🔍</p>
-                <p style={{ fontSize: 16, fontWeight: 600, color: "var(--gm-text)" }}>No items found</p>
-              </div>
-            )}
-          </div>
-        ) : (
-          restaurant?.id
-            ? <OrdersTab restaurantId={restaurant.id} />
-            : (
-              <div style={{ textAlign: "center", padding: "64px 20px" }}>
-                <p style={{ fontSize: 32, marginBottom: 8 }}>📋</p>
-                <p style={{ fontSize: 16, fontWeight: 600, color: "var(--gm-text)" }}>Connect Supabase to view orders</p>
-              </div>
-            )
         )}
       </div>
 
+      <AdminBottomNav restaurantId={restaurant?.id} />
+
       {/* Logout confirm */}
       {showLogoutConfirm && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 20px" }}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 20px" }}>
           <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} onClick={() => setShowLogoutConfirm(false)} />
           <div className="gm-card animate-slideUp" style={{ position: "relative", padding: 24, width: "100%", maxWidth: 320 }}>
             <p style={{ fontSize: 16, fontWeight: 600, color: "var(--gm-text)", marginBottom: 6 }}>Sign out?</p>

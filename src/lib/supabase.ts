@@ -49,6 +49,12 @@ export async function signIn(email: string, password: string): Promise<{ session
   return { session: mapSession(data.session), error: null };
 }
 
+export async function signUp(email: string, password: string): Promise<{ error: string | null }> {
+  if (!isSupabaseConfigured) return { error: "Supabase not configured" };
+  const { error } = await supabaseClient.auth.signUp({ email, password });
+  return { error: error?.message ?? null };
+}
+
 export async function signOut(): Promise<void> {
   await supabaseClient.auth.signOut();
 }
@@ -148,7 +154,7 @@ import type { MenuItem } from "@/data/menuData";
 const DB_COLUMNS = new Set([
   "name","price","category","image","description",
   "available","featured","prep_time","profit_tag",
-  "restaurant_id","clicks","views","tags",
+  "restaurant_id","clicks","views","tags","food_type",
 ]);
 
 function sanitize(data: Record<string, unknown>): Record<string, unknown> {
@@ -241,7 +247,7 @@ export interface CreateOrderInput {
   total: number;
 }
 
-// SEC-2: hard validation + return=minimal to avoid SELECT RLS conflict
+// SEC-2: hard validation — return=representation to get back inserted row with real id
 export async function createOrder(input: CreateOrderInput): Promise<{ order: Order | null; error: string | null }> {
   if (!input.restaurant_id) return { order: null, error: "No restaurant selected" };
   if (!input.items.length)   return { order: null, error: "Cart is empty" };
@@ -255,7 +261,7 @@ export async function createOrder(input: CreateOrderInput): Promise<{ order: Ord
         apikey: SUPABASE_ANON,
         Authorization: `Bearer ${SUPABASE_ANON}`,
         "Content-Type": "application/json",
-        Prefer: "return=minimal", // avoids SELECT RLS conflict for anon
+        Prefer: "return=representation", // get back the inserted row so we have the real DB id
       },
       body: JSON.stringify({ ...input, status: "pending" }),
     });
@@ -263,7 +269,13 @@ export async function createOrder(input: CreateOrderInput): Promise<{ order: Ord
       const body = await res.json().catch(() => ({}));
       return { order: null, error: body?.message ?? body?.hint ?? `Server error ${res.status}` };
     }
-    return { order: { ...input, status: "pending", id: crypto.randomUUID() }, error: null };
+    const rows = await res.json();
+    const inserted: Order = Array.isArray(rows) ? rows[0] : rows;
+    if (!inserted?.id) {
+      // fallback — row inserted but RLS blocked SELECT; generate a client id
+      return { order: { ...input, status: "pending", id: crypto.randomUUID() }, error: null };
+    }
+    return { order: inserted, error: null };
   } catch (e) {
     console.error("[ghost-menu] createOrder failed", e);
     return { order: null, error: e instanceof Error ? e.message : "Network error" };

@@ -19,13 +19,15 @@ const CATEGORIES = ["Starters", "Mains", "Combos", "Breakfast", "Breads", "Desse
 const defaultForm: FormData = {
   name: "", description: "", price: 0, category: "Mains", image: "",
   available: true, featured: false, prep_time: "medium", profit_tag: "medium",
+  food_type: "veg",
 };
 
 export default function ItemForm({ mode, item, onSave, onCancel }: Props) {
   const [form, setForm] = useState<FormData>(
     item ? { name: item.name, description: item.description, price: item.price, category: item.category,
               image: item.image, available: item.available, featured: item.featured,
-              prep_time: item.prep_time, profit_tag: item.profit_tag } : defaultForm
+              prep_time: item.prep_time, profit_tag: item.profit_tag,
+              food_type: item.food_type ?? "veg" } : defaultForm
   );
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [saving, setSaving] = useState(false);
@@ -98,8 +100,8 @@ export default function ItemForm({ mode, item, onSave, onCancel }: Props) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div>
             <label style={labelStyle}>Price (₹) *</label>
-           <input className="gm-input tabular-nums" type="number" placeholder="0" value={form.price || ""}
-  onChange={e => set("price", parseInt(e.target.value) || 0)} min={1} max={9999} />
+            <input className="gm-input" type="number" placeholder="0" value={form.price || ""}
+              onChange={e => set("price", parseInt(e.target.value) || 0)} min={1} max={9999} className="gm-input tabular-nums" />
             {errors.price && <p style={{ fontSize: 12, color: "var(--gm-danger)", marginTop: 4 }}>{errors.price}</p>}
           </div>
           <div>
@@ -134,6 +136,28 @@ export default function ItemForm({ mode, item, onSave, onCancel }: Props) {
               <option value="medium">🟡 Medium</option>
               <option value="low">🔴 Low</option>
             </select>
+          </div>
+        </div>
+
+        {/* Veg / Non-Veg */}
+        <div>
+          <label style={labelStyle}>Food Type *</label>
+          <div style={{ display: "flex", gap: 8 }}>
+            {(["veg", "non_veg"] as const).map(ft => (
+              <button key={ft} type="button" onClick={() => set("food_type", ft)}
+                style={{
+                  flex: 1, padding: "10px 0", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                  ...(form.food_type === ft
+                    ? ft === "veg"
+                      ? { background: "#ECFDF5", border: "2px solid #BBF7D0", color: "#15803D" }
+                      : { background: "#FEF2F2", border: "2px solid #FECACA", color: "#B91C1C" }
+                    : { background: "var(--gm-bg)", border: "1px solid var(--gm-border)", color: "var(--gm-text-secondary)" }),
+                }}>
+                <span style={{ width: 8, height: 8, borderRadius: ft === "veg" ? "50%" : 0, background: ft === "veg" ? "#15803D" : "#EF4444", flexShrink: 0 }} />
+                {ft === "veg" ? "Veg" : "Non-Veg"}
+              </button>
+            ))}
           </div>
         </div>
 

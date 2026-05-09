@@ -26,6 +26,22 @@ function PrepBadge({ prep }: { prep: "fast" | "medium" | "slow" }) {
   return <span style={{ ...style, fontSize: 9, fontWeight: 600, padding: "2px 6px", borderRadius: 99 }}>{PREP_LABEL[prep]}</span>;
 }
 
+function FoodTypeBadge({ type }: { type: "veg" | "non_veg" }) {
+  const isVeg = type === "veg";
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 4,
+      fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
+      background: isVeg ? "#ECFDF5" : "#FEF2F2",
+      color: isVeg ? "#15803D" : "#B91C1C",
+      border: `1px solid ${isVeg ? "#BBF7D0" : "#FECACA"}`,
+    }}>
+      <span style={{ width: 6, height: 6, borderRadius: isVeg ? "50%" : 0, background: isVeg ? "#15803D" : "#EF4444", display: "inline-block", flexShrink: 0 }} />
+      {isVeg ? "Veg" : "Non-Veg"}
+    </span>
+  );
+}
+
 function Tag({ tag }: { tag: string }) {
   const isPopular = tag.includes("Popular");
   return (
@@ -193,6 +209,7 @@ export default function ItemCard({ item, onClick, variant = "list", priority = f
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <p style={{ fontSize: 14, fontWeight: 700, color: "var(--gm-primary)", margin: 0 }} className="price tabular-nums">{formatPrice(item.price)}</p>
             <PrepBadge prep={item.prep_time} />
+            {item.food_type && <FoodTypeBadge type={item.food_type} />}
             {isGoingFast && <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", borderRadius: 99, background: "var(--gm-danger-bg)", color: "var(--gm-danger)" }}>🔥</span>}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }} onClick={e => e.stopPropagation()}>
