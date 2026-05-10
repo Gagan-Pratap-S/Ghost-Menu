@@ -94,7 +94,7 @@ export default function QRPage() {
         }
       `}</style>
 
-      <header className="no-print" style={{ position: "sticky", top: 0, zIndex: 10, background: "rgba(255,253,249,0.94)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderBottom: "1px solid var(--gm-border)", boxShadow: "var(--gm-shadow-sm)" }}>
+      <header className="no-print" style={{ position: "sticky", top: 0, zIndex: 10, background: "transparent", borderBottom: "none", boxShadow: "none" }}>
         <div style={{ maxWidth: 600, margin: "0 auto", padding: "12px 20px", display: "flex", alignItems: "center", gap: 12 }}>
           <a href="/admin" style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "var(--gm-radius-sm)", border: "1px solid var(--gm-border)", background: "var(--gm-bg)", color: "var(--gm-text-secondary)", textDecoration: "none", flexShrink: 0 }}>
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,16 +111,39 @@ export default function QRPage() {
       <div style={{ maxWidth: 600, margin: "0 auto", padding: "24px 20px 120px", display: "flex", flexDirection: "column", gap: 16 }}>
 
         {/* Single QR card */}
-        <div className="gm-card no-print" style={{ padding: 32, textAlign: "center" }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--gm-text)", marginBottom: 4 }}>{name}</h2>
+        <div className="gm-card no-print" style={{ padding: 32, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--gm-text)", marginBottom: 4 }}>Your QR Code</h2>
           <p style={{ fontSize: 13, color: "var(--gm-text-secondary)", marginBottom: 20 }}>General menu QR (no table)</p>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={singleQrUrl} alt={`QR code for ${name}`} width={180} height={180}
-            style={{ borderRadius: 12, border: "1px solid var(--gm-border)" }} />
-          <div style={{ display: "flex", gap: 8, marginTop: 16, alignItems: "center" }}>
+          {/* Premium QR design */}
+          <div style={{ background: "#FFFFFF", padding: 20, borderRadius: 24, boxShadow: "0 8px 24px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.06)", position: "relative", marginBottom: 16 }}>
+            {/* Decorative corner highlights */}
+            <div style={{ position: "absolute", top: -2, left: -2, width: 12, height: 12, borderTop: "2px solid var(--gm-primary)", borderLeft: "2px solid var(--gm-primary)", borderRadius: "8px 0 0 0" }} />
+            <div style={{ position: "absolute", top: -2, right: -2, width: 12, height: 12, borderTop: "2px solid var(--gm-primary)", borderRight: "2px solid var(--gm-primary)", borderRadius: "0 8px 0 0" }} />
+            <div style={{ position: "absolute", bottom: -2, left: -2, width: 12, height: 12, borderBottom: "2px solid var(--gm-primary)", borderLeft: "2px solid var(--gm-primary)", borderRadius: "0 0 0 8px" }} />
+            <div style={{ position: "absolute", bottom: -2, right: -2, width: 12, height: 12, borderBottom: "2px solid var(--gm-primary)", borderRight: "2px solid var(--gm-primary)", borderRadius: "0 0 8px 0" }} />
+            {/* Center logo */}
+            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 32, height: 32, background: "var(--gm-primary)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>🍽️</div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={singleQrUrl} alt={`QR code for ${name}`} width={180} height={180}
+              style={{ borderRadius: 12, border: "1px solid rgba(0,0,0,0.08)" }} />
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
             <code style={{ flex: 1, fontSize: 11, background: "var(--gm-bg)", borderRadius: 8, padding: "8px 12px", border: "1px solid var(--gm-border)", color: "var(--gm-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>{menuUrl}</code>
             <button className="gm-btn-secondary" style={{ height: 36, fontSize: 12, flexShrink: 0, padding: "0 14px" }} onClick={handleSingleCopy}>
               {singleCopied ? "Copied ✓" : "Copy"}
+            </button>
+          </div>
+          <div style={{ display: "flex", gap: 8, width: "100%" }}>
+            <button className="gm-btn-secondary" style={{ flex: 1, height: 40, fontSize: 13 }} onClick={() => window.print()}>
+              📄 Print
+            </button>
+            <button className="gm-btn-primary" style={{ flex: 1, height: 40, fontSize: 13 }} onClick={() => {
+              const link = document.createElement('a');
+              link.href = singleQrUrl;
+              link.download = `${slug}-qr.png`;
+              link.click();
+            }}>
+              💾 Download
             </button>
           </div>
         </div>

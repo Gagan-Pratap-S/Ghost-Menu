@@ -29,7 +29,7 @@ export default function AdminOrdersPage() {
   return (
     <div style={{ minHeight: "100vh", background: "var(--gm-bg)" }}>
       {/* Header */}
-      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "rgba(255,253,249,0.94)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderBottom: "1px solid var(--gm-border)", boxShadow: "var(--gm-shadow-sm)" }}>
+      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "transparent", borderBottom: "none", boxShadow: "none" }}>
         <div style={{ maxWidth: 520, margin: "0 auto", padding: "12px 20px", display: "flex", alignItems: "center", gap: 12 }}>
           <a href="/admin" style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "var(--gm-radius-sm)", border: "1px solid var(--gm-border)", background: "var(--gm-bg)", color: "var(--gm-text-secondary)", textDecoration: "none", flexShrink: 0 }}>
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -48,7 +48,7 @@ export default function AdminOrdersPage() {
         </div>
       </header>
 
-      <div style={{ maxWidth: 520, margin: "0 auto", paddingBottom: 120 }}>
+      <div style={{ maxWidth: 520, margin: "0 auto", padding: "24px 16px 120px", display: "flex", flexDirection: "column", gap: 16 }}>
         {restaurant?.id ? (
           <OrdersTab restaurantId={restaurant.id} />
         ) : (

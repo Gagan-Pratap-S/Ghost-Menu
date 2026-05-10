@@ -80,7 +80,7 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
   return (
     <div style={{ minHeight: "100vh", background: "var(--gm-bg)" }}>
       {/* ── Header matching JSX admin header ── */}
-      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "rgba(255,253,249,0.96)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid var(--gm-border)", boxShadow: "var(--gm-shadow-sm)" }}>
+      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "transparent", borderBottom: "none", boxShadow: "none" }}>
         <div style={{ maxWidth: 480, margin: "0 auto", padding: "16px 20px 12px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
@@ -93,26 +93,7 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
               </div>
               <p style={{ fontSize: 12, color: "var(--gm-text-tertiary)", margin: "2px 0 0" }}>Here&apos;s what&apos;s happening today.</p>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-              {/* Kitchen toggle */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 500, color: kitchenStatus === "normal" ? "var(--gm-success)" : "var(--gm-danger)" }}>
-                  {kitchenStatus === "normal" ? "Open" : "Busy"}
-                </span>
-                <button onClick={handleKitchenToggle}
-                  style={{ position: "relative", width: 40, height: 22, borderRadius: 99, border: "none", cursor: "pointer", background: kitchenStatus === "normal" ? "var(--gm-success)" : "var(--gm-danger)", transition: "background 0.2s" }}>
-                  <span style={{ position: "absolute", top: 2, width: 18, height: 18, background: "#fff", borderRadius: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.2)", transition: "left 0.2s", left: kitchenStatus === "normal" ? "calc(100% - 20px)" : 2 }} />
-                </button>
-              </div>
-              <button className="gm-notif-btn" aria-label="Notifications">🔔</button>
-            </div>
-          </div>
-
-          {/* Quick links */}
-          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-            <a href="/admin/menu" style={{ flex: 1, textAlign: "center", padding: "7px 0", borderRadius: "var(--gm-radius-pill)", border: "1px solid var(--gm-border)", fontSize: 13, fontWeight: 500, color: "var(--gm-text-secondary)", textDecoration: "none", background: "var(--gm-bg)" }}>Menu ({items.length})</a>
-            <a href="/admin/orders" style={{ flex: 1, textAlign: "center", padding: "7px 0", borderRadius: "var(--gm-radius-pill)", border: "1px solid var(--gm-border)", fontSize: 13, fontWeight: 500, color: "var(--gm-text-secondary)", textDecoration: "none", background: "var(--gm-bg)" }}>Live Orders</a>
-            <button onClick={() => setShowLogoutConfirm(true)} className="gm-btn-danger" style={{ height: 34, fontSize: 12, padding: "0 12px" }}>Sign out</button>
+            <button onClick={() => setShowLogoutConfirm(true)} className="gm-btn-danger" style={{ height: 36, fontSize: 12, padding: "0 14px", borderRadius: 99, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "var(--gm-danger)" }}>Sign out</button>
           </div>
         </div>
       </header>
@@ -133,10 +114,15 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
                   {kitchenStatus === "normal" ? "✅ All orders accepted" : "🔴 Busy — fast items prioritised"}
                 </p>
               </div>
-              <button onClick={handleKitchenToggle}
-                style={{ position: "relative", width: 48, height: 26, borderRadius: 99, border: "none", cursor: "pointer", background: kitchenStatus === "normal" ? "var(--gm-success)" : "var(--gm-danger)", transition: "background 0.2s", flexShrink: 0 }}>
-                <span style={{ position: "absolute", top: 3, width: 20, height: 20, background: "#fff", borderRadius: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.2)", transition: "left 0.2s", left: kitchenStatus === "normal" ? "calc(100% - 23px)" : 3 }} />
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 500, color: kitchenStatus === "normal" ? "var(--gm-success)" : "var(--gm-danger)" }}>
+                  {kitchenStatus === "normal" ? "Open" : "Busy"}
+                </span>
+                <button onClick={handleKitchenToggle}
+                  style={{ position: "relative", width: 48, height: 26, borderRadius: 99, border: "none", cursor: "pointer", background: kitchenStatus === "normal" ? "var(--gm-success)" : "var(--gm-danger)", transition: "background 0.2s", flexShrink: 0 }}>
+                  <span style={{ position: "absolute", top: 3, width: 20, height: 20, background: "#fff", borderRadius: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.2)", transition: "left 0.2s", left: kitchenStatus === "normal" ? "calc(100% - 23px)" : 3 }} />
+                </button>
+              </div>
             </div>
 
             {/* Metrics grid — pastel tint cards like JSX */}

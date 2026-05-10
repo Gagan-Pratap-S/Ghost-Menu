@@ -85,7 +85,7 @@ function OrderCard({ order, isNew, onStatusChange }: OrderCardProps) {
     : "var(--gm-shadow-md)";
 
   return (
-    <div style={{ background: "var(--gm-surface)", border: `1px solid ${borderColor}`, borderRadius: "var(--gm-radius-md)", padding: 16, boxShadow, transition: "all 0.2s" }}>
+    <div style={{ background: "var(--gm-surface)", border: `1px solid ${borderColor}`, borderRadius: 24, padding: 20, boxShadow, transition: "all 0.2s" }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
@@ -185,22 +185,22 @@ export default function OrdersTab({ restaurantId }: Props) {
   const filtered     = filter === "all" ? orders : orders.filter(o => o.status === filter);
 
   return (
-    <div className="animate-fadeIn" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+    <div className="animate-fadeIn" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
         {isLive ? (
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--gm-success)", display: "inline-block", animation: "urgencyPulse 2s ease-in-out infinite" }} />
-            <span style={{ fontSize: 12, fontWeight: 500, color: "var(--gm-success)" }}>Live</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: "var(--gm-success)" }}>Live</span>
           </div>
         ) : (
-          <span style={{ fontSize: 12, color: "var(--gm-text-tertiary)" }}>Connecting…</span>
+          <span style={{ fontSize: 13, color: "var(--gm-text-tertiary)" }}>Connecting…</span>
         )}
         <button onClick={load} style={{ fontSize: 13, color: "var(--gm-text-secondary)", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}>
           ↻ Refresh
         </button>
       </div>
 
-      <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }} className="scrollbar-none">
+      <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "0 0 4px 0" }} className="scrollbar-none">
         {(["all", "pending", "preparing", "ready", "served"] as const).map(f => (
           <button key={f} onClick={() => setFilter(f)} className={filter === f ? "gm-chip-active" : "gm-chip-inactive"} style={{ flexShrink: 0 }}>
             {f === "all" ? `All (${orders.length})` : f === "pending" && pendingCount > 0 ? `Pending (${pendingCount})` : f}
@@ -219,7 +219,7 @@ export default function OrdersTab({ restaurantId }: Props) {
           {filter === "all" && <p style={{ fontSize: 13, color: "var(--gm-text-secondary)", marginTop: 4 }}>Orders appear here instantly when customers place them</p>}
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {filtered.map(order => (
             <OrderCard
               key={order.id}

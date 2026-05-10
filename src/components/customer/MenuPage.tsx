@@ -116,7 +116,7 @@ export default function MenuPage({
       )}
 
       {/* ── Sticky header (matches JSX: greeting + search + status) ── */}
-      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "rgba(255,253,249,0.96)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid var(--gm-border)", boxShadow: "var(--gm-shadow-sm)" }}>
+      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "transparent", borderBottom: "none", boxShadow: "none" }}>
         <div style={{ maxWidth: 480, margin: "0 auto", padding: "16px 16px 12px" }}>
           {/* Greeting row */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
@@ -310,12 +310,12 @@ export default function MenuPage({
           )}
 
           {/* ── Category filter sticky ── */}
-          <div style={{ position: "sticky", top: 88, zIndex: 20, background: "var(--gm-surface)", borderBottom: "1px solid var(--gm-border)", marginTop: 8 }}>
+          {/* <div style={{ position: "sticky", top: 88, zIndex: 20, background: "var(--gm-surface)", borderBottom: "1px solid var(--gm-border)", marginTop: 8 }}>
             <MemoizedCategoryFilter categories={categories} activeCategory={activeCategory}
               categoryCounts={categoryCounts}
               onCategoryChange={c => { setActiveCategory(c); setSearchTerm(""); }}
             />
-          </div>
+          </div> */}
 
           {/* ── Full menu ── */}
           <section style={{ padding: "16px 16px 40px" }}>

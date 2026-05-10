@@ -170,15 +170,15 @@ function NavTab({ tab, totalTabs }: { tab: TabConfig; totalTabs: number }) {
           overflow: "hidden",
           // Expand label when active (matches JSX animation)
           maxWidth: isActive ? 60 : 0,
-          opacity: isActive ? 1 : (totalTabs <= 3 ? 1 : 0),
+          opacity: isActive ? 1 : 1,
           transition: "all 0.22s ease",
           lineHeight: 1,
         }}
       >
         {tab.label}
       </span>
-      {/* Always show label below icon when not active (classic tab style) */}
-      {!isActive && totalTabs <= 3 && (
+      {/* Always show label below icon */}
+      {!isActive && (
         <span style={{ fontSize: 11, fontWeight: 500, color: "#9C9C9C", letterSpacing: "-0.01em", lineHeight: 1 }}>
           {tab.label}
         </span>

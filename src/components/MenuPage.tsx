@@ -72,7 +72,7 @@ export default function MenuPage({ items, kitchenStatus, onItemClick }: MenuPage
   return (
     <div className="min-h-screen pb-24 bg-stone-50">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-stone-200">
+      <header className="sticky top-0 z-30 bg-transparent border-b-0 shadow-none">
         <div className="max-w-md mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
             <div>
