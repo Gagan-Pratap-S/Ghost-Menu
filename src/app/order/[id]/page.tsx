@@ -49,6 +49,7 @@ export default function OrderStatusPage() {
   const [order, setOrder]     = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
 
   useEffect(() => {
     fetchOrderById(id).then(o => {
@@ -60,6 +61,13 @@ export default function OrderStatusPage() {
   useEffect(() => {
     return subscribeToOrder(id, updated => setOrder(updated));
   }, [id]);
+
+  useEffect(() => {
+    const onScroll = () => setIsHeaderCollapsed(window.scrollY > 90);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   if (loading) return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--gm-bg)" }}>
@@ -76,22 +84,47 @@ export default function OrderStatusPage() {
     </div>
   );
 
+  const orderSubtitle = order?.table_number && order.table_number !== "QR"
+    ? `Table ${order.table_number}`
+    : order?.id
+      ? `Order ${order.id.slice(0, 8).toUpperCase()}`
+      : "Your order";
+
   return (
     <div style={{ minHeight: "100vh", background: "var(--gm-bg)" }}>
-      <header style={{ position: "sticky", top: 0, zIndex: 10, background: "transparent", borderBottom: "none", boxShadow: "none" }}>
-        <div style={{ maxWidth: 480, margin: "0 auto", padding: "12px 20px", display: "flex", alignItems: "center", gap: 12 }}>
-          <a href="/" style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "var(--gm-radius-sm)", border: "1px solid var(--gm-border)", background: "var(--gm-bg)", color: "var(--gm-text-secondary)", textDecoration: "none", flexShrink: 0 }}>
-            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </a>
-          <div>
-            <h1 style={{ fontSize: 16, fontWeight: 600, color: "var(--gm-text)", margin: 0 }}>Order Status</h1>
-            {order.id && <p style={{ fontSize: 11, color: "var(--gm-text-tertiary)", margin: 0, fontFamily: "monospace" }}>#{order.id.slice(0, 8).toUpperCase()}</p>}
-          </div>
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--gm-success)", animation: "urgencyPulse 2s ease-in-out infinite" }} />
-            <span style={{ fontSize: 12, fontWeight: 500, color: "var(--gm-success)" }}>Live</span>
+      <header
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          background: isHeaderCollapsed ? "rgba(255,253,249,0.96)" : "transparent",
+          backdropFilter: isHeaderCollapsed ? "blur(20px)" : "none",
+          borderBottom: isHeaderCollapsed ? "1px solid rgba(0,0,0,0.04)" : "none",
+          boxShadow: "none",
+          transition: "background 300ms ease, border-color 300ms ease, padding 300ms ease",
+        }}
+      >
+        <div style={{ maxWidth: 480, margin: "0 auto", padding: isHeaderCollapsed ? "12px 16px" : "24px 16px 16px", transition: "padding 300ms ease" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: isHeaderCollapsed ? 0 : 16 }}>
+            <a href="/" style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "var(--gm-radius-sm)", border: "1px solid var(--gm-border)", background: "var(--gm-bg)", color: "var(--gm-text-secondary)", textDecoration: "none", flexShrink: 0 }}>
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </a>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: isHeaderCollapsed ? "none" : "block" }}>
+                <p style={{ fontSize: 13, color: "var(--gm-text-secondary)", margin: 0 }}>Track your order in real time</p>
+                <h1 style={{ fontSize: 30, fontWeight: 800, color: "var(--gm-text)", margin: "8px 0 0", lineHeight: 1.05 }}>Order Status</h1>
+              </div>
+              <div style={{ display: isHeaderCollapsed ? "block" : "none" }}>
+                <p style={{ fontSize: 12, color: "var(--gm-text-tertiary)", margin: "0 0 4px" }}>{orderSubtitle}</p>
+                <h1 style={{ fontSize: 18, fontWeight: 700, color: "var(--gm-text)", margin: 0 }}>Order Status</h1>
+              </div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 99, background: "var(--gm-success-bg)", border: "1px solid var(--gm-success-border)" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--gm-success)", animation: "urgencyPulse 2s ease-in-out infinite" }} />
+              <span style={{ fontSize: 12, fontWeight: 500, color: "var(--gm-success)" }}>Live</span>
+            </div>
           </div>
         </div>
       </header>

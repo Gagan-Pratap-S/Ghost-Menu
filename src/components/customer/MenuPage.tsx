@@ -64,6 +64,7 @@ export default function MenuPage({
   const [foodFilter, setFoodFilter]         = useState<"all" | "veg" | "non_veg">("all");
   const [activeTab, setActiveTab]           = useState<CustomerTab>("menu");
   const [isOnline, setIsOnline]             = useState(true);
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -72,6 +73,13 @@ export default function MenuPage({
     window.addEventListener("online",  up);
     window.addEventListener("offline", down);
     return () => { window.removeEventListener("online", up); window.removeEventListener("offline", down); };
+  }, []);
+
+  useEffect(() => {
+    const onScroll = () => setIsHeaderCollapsed(window.scrollY > 90);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   const { topPicks, quickPicks, fullMenu: rawFullMenu, categories } = useMenuEngine(
@@ -115,54 +123,108 @@ export default function MenuPage({
         </div>
       )}
 
-      {/* ── Sticky header (matches JSX: greeting + search + status) ── */}
-      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "linear-gradient(180deg, rgba(255,255,255,0.35), transparent)", borderBottom: "none", boxShadow: "none" }}>
-        <div style={{ maxWidth: 480, margin: "0 auto", padding: "24px 16px 16px" }}>
-          {/* Greeting row */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 22 }}>{greeting.emoji}</span>
-                <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--gm-text)", margin: 0 }}>{greeting.name}</h1>
+      {/* ── Collapsible customer header */}
+      <header
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          background: isHeaderCollapsed ? "rgba(255,253,249,0.96)" : "transparent",
+          backdropFilter: isHeaderCollapsed ? "blur(20px)" : "none",
+          borderBottom: isHeaderCollapsed ? "1px solid rgba(0,0,0,0.04)" : "none",
+          boxShadow: "none",
+          transition: "background 300ms ease, border-color 300ms ease, padding 300ms ease",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: 480,
+            margin: "0 auto",
+            padding: isHeaderCollapsed ? "12px 16px" : "24px 16px 16px",
+            transition: "padding 300ms ease",
+          }}
+        >
+          <div
+            style={{
+              display: isHeaderCollapsed ? "none" : "flex",
+              flexDirection: "column",
+              gap: 12,
+              opacity: isHeaderCollapsed ? 0 : 1,
+              transform: isHeaderCollapsed ? "translateY(-8px)" : "translateY(0)",
+              transition: "opacity 250ms ease, transform 250ms ease",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 22 }}>{greeting.emoji}</span>
+                  <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--gm-text)", margin: 0 }}>{greeting.name}</h1>
+                </div>
+                <p style={{ fontSize: 13, color: "var(--gm-text-secondary)", margin: "2px 0 0" }}>
+                  {restaurantName
+                    ? `Welcome to ${restaurantName}`
+                    : tableNumber && tableNumber !== "QR" ? `Table ${tableNumber}` : `${memberCount} ${memberCount === 1 ? "guest" : "guests"}`}
+                </p>
               </div>
-              <p style={{ fontSize: 13, color: "var(--gm-text-secondary)", margin: "2px 0 0" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, background: kitchenStatus === "normal" ? "var(--gm-success-bg)" : "var(--gm-danger-bg)", border: `1px solid ${kitchenStatus === "normal" ? "var(--gm-success-border)" : "var(--gm-danger-border)"}` }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: kitchenStatus === "normal" ? "var(--gm-success)" : "var(--gm-danger)", display: "inline-block" }} />
+                  <span style={{ fontSize: 12, fontWeight: 500, color: kitchenStatus === "normal" ? "var(--gm-success)" : "var(--gm-danger)" }}>
+                    {kitchenStatus === "normal" ? "Open" : "Busy"}
+                  </span>
+                </div>
+                <button className="gm-notif-btn" onClick={() => setSearchOpen(v => !v)} aria-label="Search">
+                  {searchOpen
+                    ? <svg width="16" height="16" fill="none" stroke="var(--gm-primary)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    : <svg width="16" height="16" fill="none" stroke="var(--gm-text-secondary)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                  }
+                </button>
+              </div>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 16 }}>
+              <p style={{ fontSize: 13, color: "var(--gm-text-secondary)", margin: 0 }}>
                 {restaurantName
                   ? `Welcome to ${restaurantName}`
                   : tableNumber && tableNumber !== "QR" ? `Table ${tableNumber}` : `${memberCount} ${memberCount === 1 ? "guest" : "guests"}`}
               </p>
+              <h2 style={{ fontSize: 34, fontWeight: 800, color: "var(--gm-text)", margin: 0, lineHeight: 1.05 }}>Explore Today&apos;s Menu</h2>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-              {/* Kitchen status */}
-              <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 99, background: kitchenStatus === "normal" ? "var(--gm-success-bg)" : "var(--gm-danger-bg)", border: `1px solid ${kitchenStatus === "normal" ? "var(--gm-success-border)" : "var(--gm-danger-border)"}` }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: kitchenStatus === "normal" ? "var(--gm-success)" : "var(--gm-danger)", display: "inline-block" }} />
-                <span style={{ fontSize: 12, fontWeight: 500, color: kitchenStatus === "normal" ? "var(--gm-success)" : "var(--gm-danger)" }}>
-                  {kitchenStatus === "normal" ? "Open" : "Busy"}
-                </span>
-              </div>
-              {/* Notification bell */}
-              <button className="gm-notif-btn" onClick={() => setSearchOpen(v => !v)} aria-label="Search">
-                {searchOpen
-                  ? <svg width="16" height="16" fill="none" stroke="var(--gm-primary)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                  : <svg width="16" height="16" fill="none" stroke="var(--gm-text-secondary)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                }
-              </button>
+            <div style={{ position: "relative" }}>
+              <input
+                value={searchTerm}
+                onChange={e => { setSearchTerm(e.target.value); if (!searchOpen) setSearchOpen(true); }}
+                placeholder="Search for dishes..."
+                style={{ width: "100%", padding: "12px 44px 12px 16px", borderRadius: 9999, border: "1px solid var(--gm-border)", background: "var(--gm-bg)", fontSize: 14, color: "var(--gm-text)", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+              />
+              <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", color: "var(--gm-text-tertiary)", display: "flex" }}>
+                <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              </span>
+              {searchTerm && (
+                <button onClick={() => setSearchTerm("")} style={{ position: "absolute", right: 36, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: 18, color: "var(--gm-text-tertiary)", cursor: "pointer", lineHeight: 1 }}>×</button>
+              )}
             </div>
           </div>
 
-          {/* Search bar — pill shape matching JSX */}
-          <div style={{ position: "relative" }}>
-            <input
-              value={searchTerm}
-              onChange={e => { setSearchTerm(e.target.value); if (!searchOpen) setSearchOpen(true); }}
-              placeholder="Search for dishes..."
-              style={{ width: "100%", padding: "12px 44px 12px 16px", borderRadius: 9999, border: "1px solid var(--gm-border)", background: "var(--gm-bg)", fontSize: 14, color: "var(--gm-text)", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
-            />
-            <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", color: "var(--gm-text-tertiary)", display: "flex" }}>
-              <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            </span>
-            {searchTerm && (
-              <button onClick={() => setSearchTerm("")} style={{ position: "absolute", right: 36, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: 18, color: "var(--gm-text-tertiary)", cursor: "pointer", lineHeight: 1 }}>×</button>
-            )}
+          <div
+            style={{
+              display: isHeaderCollapsed ? "flex" : "none",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              minHeight: 40,
+              transition: "opacity 250ms ease, transform 250ms ease",
+              opacity: isHeaderCollapsed ? 1 : 0,
+              transform: isHeaderCollapsed ? "translateY(0)" : "translateY(-8px)",
+            }}
+          >
+            <div>
+              <p style={{ fontSize: 12, color: "var(--gm-text-tertiary)", margin: "0 0 4px" }}>
+                {restaurantName
+                  ? restaurantName
+                  : tableNumber && tableNumber !== "QR" ? `Table ${tableNumber}` : `${memberCount} ${memberCount === 1 ? "Guest" : "Guests"}`}
+              </p>
+              <h1 style={{ fontSize: 18, fontWeight: 700, color: "var(--gm-text)", margin: 0 }}>Menu</h1>
+            </div>
           </div>
         </div>
       </header>
