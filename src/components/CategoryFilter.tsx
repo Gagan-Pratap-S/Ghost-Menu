@@ -3,33 +3,48 @@
 interface CategoryFilterProps {
   categories: string[];
   activeCategory: string;
+  categoryCounts?: Record<string, number>;
   onCategoryChange: (category: string) => void;
 }
 
 export default function CategoryFilter({
   categories,
   activeCategory,
+  categoryCounts,
   onCategoryChange,
 }: CategoryFilterProps) {
   if (categories.length <= 2) return null; // only "All" + one category — no need
 
   return (
-    <div className="py-2.5 px-4 bg-white/95 backdrop-blur-sm border-b border-stone-200">
-      <div className="max-w-md mx-auto">
-        <div className="flex gap-2 overflow-x-auto pb-0.5 -mx-4 px-4 snap-x scrollbar-none">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => onCategoryChange(category)}
-              className={`flex-shrink-0 px-3.5 py-1.5 rounded-full font-medium text-xs transition-all whitespace-nowrap snap-start ${
-                activeCategory === category
-                  ? "bg-orange-500 text-white shadow-sm"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
-              }`}
-            >
-              {category}
-            </button>
-          ))}
+    <div style={{ padding: "10px 16px", background: "rgba(255,253,249,0.96)", backdropFilter: "blur(20px)", borderBottom: "1px solid var(--gm-border)" }}>
+      <div style={{ maxWidth: 480, margin: "0 auto" }}>
+        <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, scrollbarWidth: "none", msOverflowStyle: "none" }}>
+          {categories.map((category) => {
+            const isActive = activeCategory === category;
+            const count = categoryCounts?.[category];
+            return (
+              <button
+                key={category}
+                onClick={() => onCategoryChange(category)}
+                className={isActive ? "gm-chip-active" : "gm-chip-inactive"}
+                style={{ display: "flex", alignItems: "center", gap: 6 }}
+              >
+                <span>{category}</span>
+                {count !== undefined && count > 0 && (
+                  <span style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    padding: "2px 6px",
+                    borderRadius: 99,
+                    background: isActive ? "rgba(255,255,255,0.2)" : "var(--gm-bg)",
+                    color: isActive ? "#fff" : "var(--gm-text-secondary)"
+                  }}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

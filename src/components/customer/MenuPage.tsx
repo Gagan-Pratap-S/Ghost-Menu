@@ -7,6 +7,9 @@ import CategoryFilter from "./CategoryFilter";
 import CustomerBottomNav, { CustomerTab } from "@/components/navigation/CustomerBottomNav";
 import { useMenuEngine } from "@/hooks/useMenuEngine";
 import { formatPrice } from "@/lib/constants";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { FeedbackModal, FeedbackButton } from "@/components/FeedbackModal";
+import { useAnalytics } from "@/context/AnalyticsContext";
 
 interface WeatherContext { temp: number; isRaining: boolean; }
 
@@ -37,16 +40,16 @@ const TAG_STYLE: Record<string, { bg: string; text: string; border: string }> = 
 };
 
 function SkeletonCard({ h }: { h: number }) {
-  return <div className="animate-skeleton" style={{ height: h, borderRadius: 20 }} />;
+  return <div className="gm-skeleton" style={{ height: h, borderRadius: "var(--gm-radius-xl)" }} />;
 }
 function SkeletonList() {
   return (
-    <div style={{ display: "flex", gap: 12, padding: "12px", background: "var(--gm-surface)", borderRadius: 16, border: "1px solid var(--gm-border)" }}>
-      <div className="animate-skeleton" style={{ width: 64, height: 64, borderRadius: 12, flexShrink: 0 }} />
+    <div style={{ display: "flex", gap: 12, padding: "12px", background: "var(--gm-surface)", borderRadius: "var(--gm-radius-md)", border: "1px solid var(--gm-border)" }}>
+      <div className="gm-skeleton" style={{ width: 64, height: 64, borderRadius: "var(--gm-radius-sm)", flexShrink: 0 }} />
       <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 8, padding: "4px 0" }}>
-        <div className="animate-skeleton" style={{ height: 12, width: "60%", borderRadius: 6 }} />
-        <div className="animate-skeleton" style={{ height: 10, width: "80%", borderRadius: 6 }} />
-        <div className="animate-skeleton" style={{ height: 10, width: "25%", borderRadius: 6 }} />
+        <div className="gm-skeleton" style={{ height: 12, width: "60%", borderRadius: 6 }} />
+        <div className="gm-skeleton" style={{ height: 10, width: "80%", borderRadius: 6 }} />
+        <div className="gm-skeleton" style={{ height: 10, width: "25%", borderRadius: 6 }} />
       </div>
     </div>
   );
@@ -65,6 +68,9 @@ export default function MenuPage({
   const [activeTab, setActiveTab]           = useState<CustomerTab>("menu");
   const [isOnline, setIsOnline]             = useState(true);
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+
+  const { trackMenuView, trackItemView, trackSearch, trackCategoryFilter } = useAnalytics();
 
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -82,6 +88,13 @@ export default function MenuPage({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Track menu view
+  useEffect(() => {
+    if (restaurantSlug) {
+      trackMenuView(restaurantId || "", restaurantSlug);
+    }
+  }, [restaurantSlug, restaurantId, trackMenuView]);
+
   const { topPicks, quickPicks, fullMenu: rawFullMenu, categories } = useMenuEngine(
     items, kitchenStatus, activeCategory, searchTerm, memberCount, activeTags, weatherContext
   );
@@ -96,9 +109,29 @@ export default function MenuPage({
     return counts;
   }, [items]);
 
-  const handleItemClick = useCallback((item: MenuItem) => { onItemClick(item); }, [onItemClick]);
-  const toggleTag = (tag: string) =>
-    setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  // Track search
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      const resultCount = fullMenu.length;
+      trackSearch(searchTerm.trim(), resultCount);
+    }
+  }, [searchTerm, fullMenu.length, trackSearch]);
+
+  const handleItemClick = useCallback((item: MenuItem) => {
+    trackItemView(item.id, item.name, item.category);
+    onItemClick(item);
+  }, [onItemClick, trackItemView]);
+  const toggleTag = useCallback((tag: string) =>
+    setActiveTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]), []);
+  const handleCategoryChange = useCallback((c: string) => {
+    setActiveCategory(c);
+    setSearchTerm("");
+    trackCategoryFilter(c);
+  }, [trackCategoryFilter]);
+  const handleFoodFilterChange = useCallback((f: "all" | "veg" | "non_veg") => setFoodFilter(f), []);
+  const handleClearSearch = useCallback(() => setSearchTerm(""), []);
+  const handleClearTags = useCallback(() => setActiveTags([]), []);
+  const handleClearFilters = useCallback(() => { setActiveCategory("All"); setSearchTerm(""); }, []);
 
   const showSections = !searchTerm && activeCategory === "All" && activeTags.length === 0;
 
@@ -118,8 +151,26 @@ export default function MenuPage({
   return (
     <div style={{ minHeight: "100vh", paddingBottom: 96, background: "var(--gm-bg)" }}>
       {!isOnline && (
-        <div style={{ textAlign: "center", padding: "8px 16px", fontSize: 13, fontWeight: 500, color: "#92400E", background: "var(--gm-warning-bg)", borderBottom: "1px solid var(--gm-warning-border)" }}>
-          Offline — browsing saved menu. Orders paused.
+        <div style={{
+          textAlign: "center",
+          padding: "12px 16px",
+          fontSize: 14,
+          fontWeight: 500,
+          color: "var(--gm-text)",
+          background: "var(--gm-warning-bg)",
+          borderBottom: "1px solid var(--gm-warning-border)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 8
+        }}>
+          <span style={{ fontSize: 16 }}>📶</span>
+          <div>
+            <div style={{ fontWeight: 600 }}>You're offline</div>
+            <div style={{ fontSize: 12, color: "var(--gm-text-secondary)", fontWeight: 400 }}>
+              Browsing saved menu. Orders will resume when connection returns.
+            </div>
+          </div>
         </div>
       )}
 
@@ -173,6 +224,7 @@ export default function MenuPage({
                     {kitchenStatus === "normal" ? "Open" : "Busy"}
                   </span>
                 </div>
+                <ThemeToggle />
                 <button className="gm-notif-btn" onClick={() => setSearchOpen(v => !v)} aria-label="Search">
                   {searchOpen
                     ? <svg width="16" height="16" fill="none" stroke="var(--gm-primary)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
@@ -193,14 +245,31 @@ export default function MenuPage({
               <input
                 value={searchTerm}
                 onChange={e => { setSearchTerm(e.target.value); if (!searchOpen) setSearchOpen(true); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    // Could add search submission logic here
+                    e.currentTarget.blur();
+                  } else if (e.key === 'Escape') {
+                    setSearchTerm("");
+                    e.currentTarget.blur();
+                  }
+                }}
                 placeholder="Search for dishes..."
-                style={{ width: "100%", padding: "12px 44px 12px 16px", borderRadius: 9999, border: "1px solid var(--gm-border)", background: "var(--gm-bg)", fontSize: 14, color: "var(--gm-text)", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }}
+                style={{ width: "100%", padding: "12px 44px 12px 16px", borderRadius: "var(--gm-radius-pill)", border: "1px solid var(--gm-border)", background: "var(--gm-bg)", fontSize: 14, color: "var(--gm-text)", outline: "none", boxSizing: "border-box", fontFamily: "inherit", transition: "border-color 0.2s ease, box-shadow 0.2s ease" }}
+                onFocus={(e) => { e.target.style.borderColor = "var(--gm-primary)"; e.target.style.boxShadow = "var(--gm-focus-ring)"; }}
+                onBlur={(e) => { e.target.style.borderColor = "var(--gm-border)"; e.target.style.boxShadow = "none"; }}
+                aria-label="Search menu items"
               />
               <span style={{ position: "absolute", right: 14, top: "50%", transform: "translateY(-50%)", color: "var(--gm-text-tertiary)", display: "flex" }}>
                 <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
               </span>
               {searchTerm && (
-                <button onClick={() => setSearchTerm("")} style={{ position: "absolute", right: 36, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: 18, color: "var(--gm-text-tertiary)", cursor: "pointer", lineHeight: 1, transition: "transform 0.15s" }}>×</button>
+                <button onClick={handleClearSearch} style={{ position: "absolute", right: 36, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: 18, color: "var(--gm-text-tertiary)", cursor: "pointer", lineHeight: 1, transition: "transform 0.15s", borderRadius: "50%", width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center" }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "var(--gm-bg)"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+                  aria-label="Clear search">
+                  ×
+                </button>
               )}
             </div>
           </div>
@@ -276,18 +345,34 @@ export default function MenuPage({
             <div style={{ padding: "20px 16px 0" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--gm-text)", margin: 0 }}>Categories</h3>
-                <button onClick={() => setActiveCategory("All")} style={{ fontSize: 13, color: "var(--gm-primary)", fontWeight: 600, background: "none", border: "none", cursor: "pointer" }}>View All</button>
+                <button onClick={handleClearFilters} style={{ fontSize: 13, color: "var(--gm-primary)", fontWeight: 600, background: "none", border: "none", cursor: "pointer" }}>View All</button>
               </div>
               <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }} className="scrollbar-none">
-                {categories.slice(0, 6).map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setActiveCategory(cat)}
-                    className={activeCategory === cat ? "gm-pill-active" : "gm-pill-inactive"}
-                  >
-                    {cat}
-                  </button>
-                ))}
+                {categories.slice(0, 6).map(cat => {
+                  const count = categoryCounts[cat] || 0;
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => handleCategoryChange(cat)}
+                      className={activeCategory === cat ? "gm-pill-active" : "gm-pill-inactive"}
+                      style={{ display: "flex", alignItems: "center", gap: 6 }}
+                    >
+                      <span>{cat}</span>
+                      {count > 0 && (
+                        <span style={{
+                          fontSize: 10,
+                          fontWeight: 600,
+                          padding: "2px 6px",
+                          borderRadius: 99,
+                          background: activeCategory === cat ? "rgba(255,255,255,0.2)" : "var(--gm-bg)",
+                          color: activeCategory === cat ? "#fff" : "var(--gm-text-secondary)"
+                        }}>
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -334,7 +419,7 @@ export default function MenuPage({
               const label = f === "all" ? "All" : f === "veg" ? "🟢 Veg" : "🔴 Non-Veg";
               const isActive = foodFilter === f;
               return (
-                <button key={f} onClick={() => setFoodFilter(f)}
+                <button key={f} onClick={() => handleFoodFilterChange(f)}
                   style={{
                     flexShrink: 0, padding: "5px 14px", borderRadius: 99, fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.15s", fontFamily: "inherit",
                     ...(isActive
@@ -366,34 +451,45 @@ export default function MenuPage({
                 );
               })}
               {activeTags.length > 0 && (
-                <button onClick={() => setActiveTags([])} style={{ flexShrink: 0, padding: "5px 12px", borderRadius: 99, fontSize: 12, color: "var(--gm-text-secondary)", background: "var(--gm-bg)", border: "1px solid var(--gm-border)", cursor: "pointer", fontFamily: "inherit" }}>Clear ×</button>
+                <button onClick={handleClearTags} style={{ flexShrink: 0, padding: "5px 12px", borderRadius: 99, fontSize: 12, color: "var(--gm-text-secondary)", background: "var(--gm-bg)", border: "1px solid var(--gm-border)", cursor: "pointer", fontFamily: "inherit" }}>Clear ×</button>
               )}
             </div>
           )}
 
           {/* ── Category filter sticky ── */}
-          {/* <div style={{ position: "sticky", top: 88, zIndex: 20, background: "var(--gm-surface)", borderBottom: "1px solid var(--gm-border)", marginTop: 8 }}>
+          <div style={{ position: "sticky", top: 88, zIndex: 20, background: "var(--gm-surface)", borderBottom: "1px solid var(--gm-border)" }}>
             <MemoizedCategoryFilter categories={categories} activeCategory={activeCategory}
               categoryCounts={categoryCounts}
-              onCategoryChange={c => { setActiveCategory(c); setSearchTerm(""); }}
+              onCategoryChange={handleCategoryChange}
             />
-          </div> */}
+          </div>
 
           {/* ── Full menu ── */}
           <section style={{ padding: "16px 16px 40px" }}>
             {fullMenu.length === 0 ? (
               <div style={{ textAlign: "center", padding: "64px 20px" }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>{activeCategory !== "All" ? "😔" : "🔍"}</div>
-                <p style={{ fontSize: 16, fontWeight: 600, color: "var(--gm-text)" }}>
-                  {activeCategory !== "All" ? `${activeCategory} unavailable` : "Nothing found"}
+                <div style={{ fontSize: 48, marginBottom: 16 }}>
+                  {activeCategory !== "All" ? "🍽️" : searchTerm ? "🔍" : "📋"}
+                </div>
+                <p style={{ fontSize: 18, fontWeight: 700, color: "var(--gm-text)", marginBottom: 8 }}>
+                  {activeCategory !== "All"
+                    ? `${activeCategory} unavailable`
+                    : searchTerm
+                      ? "No dishes found"
+                      : "Menu is empty"}
                 </p>
-                <p style={{ fontSize: 13, color: "var(--gm-text-secondary)", marginTop: 4 }}>
-                  {activeCategory !== "All" ? "All items sold out right now" : "Try a different search or category"}
+                <p style={{ fontSize: 14, color: "var(--gm-text-secondary)", lineHeight: 1.5, marginBottom: 20 }}>
+                  {activeCategory !== "All"
+                    ? "All items in this category are currently sold out or unavailable."
+                    : searchTerm
+                      ? `No dishes match "${searchTerm}". Try a different search term.`
+                      : "The restaurant hasn't added any dishes yet."}
                 </p>
-                {activeCategory !== "All" && (
-                  <button onClick={() => setActiveCategory("All")}
-                    style={{ marginTop: 16, fontSize: 13, fontWeight: 500, color: "var(--gm-primary)", background: "none", border: "none", cursor: "pointer" }}>
-                    Browse all items →
+                {(activeCategory !== "All" || searchTerm) && (
+                  <button onClick={handleClearFilters}
+                    className="gm-btn-secondary"
+                    style={{ fontSize: 14, padding: "12px 20px" }}>
+                    {searchTerm ? "Clear search" : "Browse all dishes"} →
                   </button>
                 )}
               </div>
@@ -424,6 +520,14 @@ export default function MenuPage({
         tableNumber={tableNumber}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+      />
+
+      {/* Feedback System */}
+      <FeedbackButton onClick={() => setShowFeedbackModal(true)} />
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
+        restaurantName={restaurantName}
       />
     </div>
   );

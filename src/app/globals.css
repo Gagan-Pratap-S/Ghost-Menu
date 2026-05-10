@@ -87,6 +87,70 @@
   --gm-font-price: 24px;
 }
 
+/* ─── Dark Mode Variables ─────────────────────── */
+[data-theme="dark"] {
+  /* Primary Brand Colors (unchanged for brand consistency) */
+  --gm-primary:        #FF7A00;
+  --gm-primary-hover:  #FF8A1A;
+  --gm-primary-pressed:#E86700;
+  --gm-primary-soft:   #2A1F15;
+  --gm-primary-glow:   rgba(255,122,0,0.30);
+  --gm-peach:          #3D2A1A;
+  --gm-apricot:        #2A1F15;
+
+  /* Background System */
+  --gm-bg:             #0F0F0F;
+  --gm-bg-secondary:   #1A1A1A;
+  --gm-surface:        #1F1F1F;
+  --gm-surface-raised: #262626;
+  --gm-surface-card:   #1F1F1F;
+
+  /* Border System */
+  --gm-border:         rgba(255,255,255,0.08);
+  --gm-border-strong:  rgba(255,255,255,0.15);
+  --gm-divider:        rgba(255,255,255,0.05);
+
+  /* Text Hierarchy */
+  --gm-text:           #FFFFFF;
+  --gm-text-secondary: #CCCCCC;
+  --gm-text-tertiary:  #999999;
+  --gm-disabled:       #666666;
+
+  /* Tint System */
+  --gm-tint-orange:  #2A1F15;
+  --gm-tint-pink:    #2A1A1A;
+  --gm-tint-yellow:  #2A2415;
+  --gm-tint-green:   #1A241A;
+  --gm-tint-lavender:#1F1A2A;
+  --gm-tint-blue:    #1A1F2A;
+
+  /* Status Colors */
+  --gm-success:        #4ADE80;
+  --gm-success-bg:     #1A241A;
+  --gm-success-border: #2A3A2A;
+  --gm-warning:        #FBBF24;
+  --gm-warning-bg:     #2A2415;
+  --gm-warning-border: #3A321A;
+  --gm-danger:         #EF4444;
+  --gm-danger-bg:      #2A1A1A;
+  --gm-danger-border:  #3A2424;
+  --gm-info:           #60A5FA;
+  --gm-info-bg:        #1A1F2A;
+  --gm-info-border:    #242A3A;
+
+  /* Shadow System (enhanced for dark mode) */
+  --gm-shadow-sm:  0 2px 8px rgba(0,0,0,0.25);
+  --gm-shadow-md:  0 8px 24px rgba(0,0,0,0.35);
+  --gm-shadow-lg:  0 12px 32px rgba(0,0,0,0.45);
+  --gm-shadow-xl:  0 20px 50px rgba(0,0,0,0.55);
+  --gm-shadow-btn: 0 6px 18px rgba(255,122,0,0.35);
+  --gm-shadow-nav: 0 10px 30px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.25);
+  --gm-shadow-card: 0 8px 24px rgba(0,0,0,0.35);
+
+  /* Focus Ring (enhanced contrast) */
+  --gm-focus-ring: 0 0 0 3px rgba(255,122,0,0.4);
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: smooth; }
 
@@ -580,15 +644,83 @@ body {
   animation: urgencyPulse 1.5s infinite;
 }
 
-@media print {
-  body * { visibility: hidden !important; }
-  .print-visible, .print-visible * { visibility: visible !important; }
+/* ─── Responsive Design ─── */
+@media (max-width: 480px) {
+  :root {
+    --gm-radius-xl: 16px;
+    --gm-radius-lg: 12px;
+    --gm-radius-md: 8px;
+    --gm-radius-sm: 6px;
+    --gm-radius-xs: 4px;
+    --gm-radius-pill: 9999px;
+    --gm-radius-input: 12px;
+  }
+
+  .gm-card {
+    padding: 16px;
+  }
+
+  .gm-btn-primary,
+  .gm-btn-secondary {
+    height: 52px;
+    padding: 0 20px;
+    font-size: var(--gm-font-label);
+  }
+
+  .gm-btn-ghost {
+    height: 44px;
+    padding: 0 16px;
+  }
+
+  .gm-chip-active,
+  .gm-chip-inactive {
+    padding: 8px 16px;
+    font-size: var(--gm-font-caption);
+  }
 }
 
+@media (max-width: 360px) {
+  .gm-card {
+    padding: 12px;
+  }
+
+  .gm-btn-primary,
+  .gm-btn-secondary {
+    height: 48px;
+    padding: 0 16px;
+    font-size: 14px;
+  }
+}
+
+/* ─── High Contrast Mode ─── */
+@media (prefers-contrast: high) {
+  :root {
+    --gm-border: #000000;
+    --gm-border-strong: #000000;
+    --gm-text-secondary: #000000;
+    --gm-text-tertiary: #666666;
+  }
+
+  .gm-card {
+    border-width: 2px;
+  }
+}
+
+/* ─── Reduced Motion ─── */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .gm-animate-fade-in,
+  .gm-animate-slide-up,
+  .gm-animate-scale-in,
+  .gm-animate-bounce-in,
+  .gm-animate-success-check {
+    animation: none;
   }
 }
