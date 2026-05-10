@@ -80,8 +80,8 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
   return (
     <div style={{ minHeight: "100vh", background: "var(--gm-bg)" }}>
       {/* ── Header matching JSX admin header ── */}
-      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "transparent", borderBottom: "none", boxShadow: "none" }}>
-        <div style={{ maxWidth: 480, margin: "0 auto", padding: "16px 20px 12px" }}>
+      <header style={{ position: "relative", background: "linear-gradient(180deg, rgba(255,255,255,0.35), transparent)", borderBottom: "none", boxShadow: "none" }}>
+        <div style={{ maxWidth: 480, margin: "0 auto", padding: "24px 20px 16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
               <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--gm-text)", margin: "0 0 2px" }}>Dashboard</h1>

@@ -94,8 +94,8 @@ export default function QRPage() {
         }
       `}</style>
 
-      <header className="no-print" style={{ position: "sticky", top: 0, zIndex: 10, background: "transparent", borderBottom: "none", boxShadow: "none" }}>
-        <div style={{ maxWidth: 600, margin: "0 auto", padding: "12px 20px", display: "flex", alignItems: "center", gap: 12 }}>
+      <header className="no-print" style={{ position: "relative", background: "linear-gradient(180deg, rgba(255,255,255,0.35), transparent)", borderBottom: "none", boxShadow: "none" }}>
+        <div style={{ maxWidth: 600, margin: "0 auto", padding: "24px 20px 16px", display: "flex", alignItems: "center", gap: 12 }}>
           <a href="/admin" style={{ width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "var(--gm-radius-sm)", border: "1px solid var(--gm-border)", background: "var(--gm-bg)", color: "var(--gm-text-secondary)", textDecoration: "none", flexShrink: 0 }}>
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

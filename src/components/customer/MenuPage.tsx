@@ -116,8 +116,8 @@ export default function MenuPage({
       )}
 
       {/* ── Sticky header (matches JSX: greeting + search + status) ── */}
-      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "transparent", borderBottom: "none", boxShadow: "none" }}>
-        <div style={{ maxWidth: 480, margin: "0 auto", padding: "16px 16px 12px" }}>
+      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "linear-gradient(180deg, rgba(255,255,255,0.35), transparent)", borderBottom: "none", boxShadow: "none" }}>
+        <div style={{ maxWidth: 480, margin: "0 auto", padding: "24px 16px 16px" }}>
           {/* Greeting row */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
             <div>
