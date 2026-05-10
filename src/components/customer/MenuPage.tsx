@@ -200,7 +200,7 @@ export default function MenuPage({
                 <svg width="17" height="17" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
               </span>
               {searchTerm && (
-                <button onClick={() => setSearchTerm("")} style={{ position: "absolute", right: 36, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: 18, color: "var(--gm-text-tertiary)", cursor: "pointer", lineHeight: 1 }}>×</button>
+                <button onClick={() => setSearchTerm("")} style={{ position: "absolute", right: 36, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", fontSize: 18, color: "var(--gm-text-tertiary)", cursor: "pointer", lineHeight: 1, transition: "transform 0.15s" }}>×</button>
               )}
             </div>
           </div>

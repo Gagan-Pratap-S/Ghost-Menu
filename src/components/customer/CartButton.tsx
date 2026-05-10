@@ -37,7 +37,7 @@ export default function CartButton({ restaurantId, guestName, memberCount, table
   return (
     <>
       <div
-        style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 40, padding: `0 16px max(16px, env(safe-area-inset-bottom)) 16px` }}
+        style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 150, padding: `0 16px max(16px, env(safe-area-inset-bottom)) 16px` }}
         className="animate-cartAppear"
       >
         <button

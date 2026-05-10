@@ -176,7 +176,14 @@ export default function ItemForm({ mode, item, onSave, onCancel }: Props) {
 
         <div style={{ display: "flex", gap: 10, paddingTop: 4 }}>
           <button onClick={onCancel} disabled={saving} className="gm-btn-secondary" style={{ flex: 1 }}>Cancel</button>
-          <button onClick={handleSave} disabled={saving} className="gm-btn-primary" style={{ flex: 1 }}>
+          <button onClick={(e) => {
+            if (!saving) {
+              const btn = e.currentTarget as HTMLButtonElement;
+              btn.classList.add('animate-cartPop');
+              setTimeout(() => btn.classList.remove('animate-cartPop'), 300);
+            }
+            handleSave();
+          }} disabled={saving} className="gm-btn-primary" style={{ flex: 1, willChange: "transform" }}>
             {saving ? "Saving…" : mode === "add" ? "Add Dish" : "Save Changes"}
           </button>
         </div>

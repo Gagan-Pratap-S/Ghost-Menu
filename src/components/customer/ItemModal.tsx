@@ -40,14 +40,16 @@ export default function ItemModal({ item, onClose, onComboItemClick, restaurantI
     slow:   { background: "var(--gm-danger-bg)",  border: "1px solid var(--gm-danger-border)",  color: "#B91C1C" },
   }[item.prep_time];
 
-  const handleAdd = () => add({ id: item.id, name: item.name, price: item.price, image: item.image });
+  const handleAdd = () => {
+    add({ id: item.id, name: item.name, price: item.price, image: item.image });
+  };
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" }} role="dialog" aria-modal="true" aria-label={item.name}>
-      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "flex-end", justifyContent: "center" }} role="dialog" aria-modal="true" aria-label={item.name}>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", backdropFilter: "blur(8px)" }}
         className="animate-fadeIn" onClick={onClose} />
 
-      <div style={{ position: "relative", width: "100%", maxWidth: 480, background: "var(--gm-surface)", borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--gm-shadow-xl)" }}
+      <div style={{ position: "relative", width: "100%", maxWidth: 480, background: "var(--gm-surface)", borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--gm-shadow-xl)", paddingBottom: "calc(32px + env(safe-area-inset-bottom))" }}
         className="animate-slideUp">
 
         {/* Close button */}
@@ -113,15 +115,27 @@ export default function ItemModal({ item, onClose, onComboItemClick, restaurantI
 
           {/* CTA */}
           {qty === 0 ? (
-            <button onClick={handleAdd} className="gm-btn-primary" style={{ width: "100%", height: 52, fontSize: 15 }}>
+            <button onClick={(e) => {
+              handleAdd();
+              const btn = e.currentTarget as HTMLButtonElement;
+              btn.classList.add('animate-cartPop');
+              setTimeout(() => btn.classList.remove('animate-cartPop'), 300);
+            }} className="gm-btn-primary" style={{ width: "100%", height: 52, fontSize: 15 }}>
               Add to Cart · {formatPrice(item.price)}
             </button>
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--gm-bg)", borderRadius: "var(--gm-radius-md)", padding: "12px 16px" }}>
               <button onClick={() => decrement(item.id)}
-                style={{ width: 40, height: 40, borderRadius: 50, border: "1px solid var(--gm-border)", background: "var(--gm-surface)", color: "var(--gm-text)", fontSize: 18, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                style={{ width: 40, height: 40, borderRadius: 50, border: "1px solid var(--gm-border)", background: "var(--gm-surface)", color: "var(--gm-text)", fontSize: 18, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "transform 0.15s" }}>−</button>
               <span style={{ flex: 1, textAlign: "center", fontSize: 15, fontWeight: 700, color: "var(--gm-text)" }} className="tabular-nums">{qty} in cart</span>
-              <button onClick={() => increment(item.id)}
+              <button onClick={() => {
+                increment(item.id);
+                const btn = event?.currentTarget as HTMLButtonElement;
+                if (btn) {
+                  btn.classList.add('animate-cartPop');
+                  setTimeout(() => btn.classList.remove('animate-cartPop'), 300);
+                }
+              }}
                 style={{ width: 40, height: 40, borderRadius: 50, border: "none", background: "var(--gm-primary)", color: "#fff", fontSize: 18, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(255,122,0,0.3)" }}>+</button>
             </div>
           )}

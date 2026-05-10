@@ -91,11 +91,11 @@ export default function CartModal({ open, onClose, restaurantId, guestName, memb
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "flex-end", justifyContent: "center" }} role="dialog" aria-modal="true">
-      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}
+    <div style={{ position: "fixed", inset: 0, zIndex: 1000, display: "flex", alignItems: "flex-end", justifyContent: "center" }} role="dialog" aria-modal="true">
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", backdropFilter: "blur(8px)" }}
         className="animate-fadeIn" onClick={onClose} />
 
-      <div style={{ position: "relative", width: "100%", maxWidth: 480, background: "var(--gm-surface)", borderTopLeftRadius: 28, borderTopRightRadius: 28, boxShadow: "var(--gm-shadow-xl)", maxHeight: "88vh", display: "flex", flexDirection: "column" }}
+      <div style={{ position: "relative", width: "100%", maxWidth: 480, background: "var(--gm-surface)", borderTopLeftRadius: 28, borderTopRightRadius: 28, boxShadow: "var(--gm-shadow-xl)", maxHeight: "88vh", display: "flex", flexDirection: "column", paddingBottom: "calc(32px + env(safe-area-inset-bottom))" }}
         className="animate-slideUp">
 
         {/* Header */}
@@ -186,12 +186,17 @@ export default function CartModal({ open, onClose, restaurantId, guestName, memb
                   {/* Qty controls matching JSX style */}
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
                     <button onClick={() => decrement(item.id)}
-                      style={{ width: 28, height: 28, borderRadius: 9999, border: "none", background: "var(--gm-tint-orange)", color: "var(--gm-primary)", fontSize: 16, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                      style={{ width: 28, height: 28, borderRadius: 9999, border: "none", background: "var(--gm-tint-orange)", color: "var(--gm-primary)", fontSize: 16, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "transform 0.15s" }}>−</button>
                     <span style={{ fontSize: 14, fontWeight: 700, color: "var(--gm-text)", width: 20, textAlign: "center" }} className="tabular-nums">{item.quantity}</span>
-                    <button onClick={() => increment(item.id)}
+                    <button onClick={(e) => {
+                      increment(item.id);
+                      const btn = e.currentTarget as HTMLButtonElement;
+                      btn.classList.add('animate-cartPop');
+                      setTimeout(() => btn.classList.remove('animate-cartPop'), 300);
+                    }}
                       style={{ width: 28, height: 28, borderRadius: 9999, border: "none", background: "var(--gm-primary)", color: "#fff", fontSize: 16, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
                     <button onClick={() => remove(item.id)}
-                      style={{ width: 28, height: 28, borderRadius: 9, border: "none", background: "var(--gm-danger-bg)", color: "var(--gm-danger)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginLeft: 2 }}
+                      style={{ width: 28, height: 28, borderRadius: 9, border: "none", background: "var(--gm-danger-bg)", color: "var(--gm-danger)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", marginLeft: 2, transition: "transform 0.15s" }}
                       aria-label={`Remove ${item.name}`}>
                       <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -242,7 +247,14 @@ export default function CartModal({ open, onClose, restaurantId, guestName, memb
         {/* Footer */}
         {items.length > 0 && (isIdle || isPlacing) && (
           <div style={{ padding: "12px 20px 24px", borderTop: "1px solid var(--gm-border)", flexShrink: 0 }}>
-            <button onClick={handlePlaceOrder} disabled={isPlacing} className="gm-btn-primary" style={{ width: "100%", height: 54, fontSize: 15, borderRadius: "9999px" }}>
+            <button onClick={(e) => {
+              handlePlaceOrder();
+              const btn = e.currentTarget as HTMLButtonElement;
+              if (!isPlacing) {
+                btn.classList.add('animate-cartPop');
+                setTimeout(() => btn.classList.remove('animate-cartPop'), 300);
+              }
+            }} disabled={isPlacing} className="gm-btn-primary" style={{ width: "100%", height: 54, fontSize: 15, borderRadius: "9999px" }}>
               {isPlacing ? (
                 <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ width: 16, height: 16, border: "2px solid rgba(255,255,255,0.4)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />

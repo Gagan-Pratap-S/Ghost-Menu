@@ -83,8 +83,17 @@ function QtyControls({ qty, onInc, onDec }: { qty: number; onInc: (e: React.Mous
 }
 
 function AddButton({ onAdd }: { onAdd: (e: React.MouseEvent) => void }) {
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const handleClick = (e: React.MouseEvent) => {
+    onAdd(e);
+    const btn = btnRef.current;
+    if (btn) {
+      btn.classList.add('animate-cartPop');
+      setTimeout(() => btn.classList.remove('animate-cartPop'), 300);
+    }
+  };
   return (
-    <button onClick={onAdd} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "var(--gm-primary)", color: "#fff", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "var(--gm-shadow-btn)" }}>+</button>
+    <button ref={btnRef} onClick={handleClick} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "var(--gm-primary)", color: "#fff", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "var(--gm-shadow-btn)", willChange: "transform" }}>+</button>
   );
 }
 

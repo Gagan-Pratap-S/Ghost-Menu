@@ -45,7 +45,7 @@ export default function BottomNav({ tabs }: BottomNavProps) {
         bottom: 0,
         left: 0,
         right: 0,
-        zIndex: 51,
+        zIndex: 100,
         paddingBottom: "max(16px, env(safe-area-inset-bottom))",
         paddingLeft:  "max(16px, env(safe-area-inset-left))",
         paddingRight: "max(16px, env(safe-area-inset-right))",
