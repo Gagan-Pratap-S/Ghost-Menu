@@ -103,7 +103,7 @@ export default function AdminMenuPage() {
             </svg>
           </a>
           <div style={{ flex: 1 }}>
-            <h1 style={{ fontSize: 16, fontWeight: 700, color: "var(--gm-text)", margin: 0 }}>Menu</h1>
+            <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--gm-text)", margin: 0 }}>Menu Management</h1>
             <p style={{ fontSize: 12, color: "var(--gm-text-tertiary)", margin: 0 }}>{items.length} items · {restaurant?.name}</p>
           </div>
           <button
@@ -267,8 +267,8 @@ function MenuItemRow({ item, indicator, onEdit, onToggleAvailable, onToggleFeatu
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
         <button onClick={onEdit} style={{ padding: "7px 0", borderRadius: "var(--gm-radius-sm)", border: "1px solid var(--gm-border)", background: "var(--gm-bg)", color: "var(--gm-text-secondary)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>✏️ Edit</button>
-        <button onClick={onToggleAvailable} style={{ padding: "7px 0", borderRadius: 10, border: "none", fontSize: 12, fontWeight: 500, cursor: "pointer", ...(item.available ? { background: "var(--gm-success-bg)", color: "#15803D" } : { background: "var(--gm-danger-bg)", color: "#B91C1C" }) }}>
-          {item.available ? "✓ Avail" : "✗ Sold"}
+        <button onClick={onToggleAvailable} style={{ gridColumn: "span 1", padding: "7px 0", borderRadius: 10, border: "none", fontSize: 12, fontWeight: 500, cursor: "pointer", ...(item.available ? { background: "var(--gm-success-bg)", color: "#15803D" } : { background: "var(--gm-danger-bg)", color: "#B91C1C" }) }}>
+          {item.available ? "✓ Available" : "✗ Sold Out"}
         </button>
         <button onClick={onToggleFeatured} style={{ padding: "7px 0", borderRadius: 10, border: "none", fontSize: 12, fontWeight: 500, cursor: "pointer", ...(item.featured ? { background: "#FFFBEB", color: "#92400E" } : { background: "var(--gm-bg)", color: "var(--gm-text-secondary)" }) }}>
           {item.featured ? "⭐ Feat" : "Feature"}

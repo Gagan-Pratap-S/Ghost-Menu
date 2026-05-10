@@ -14,7 +14,6 @@ export interface TabConfig {
 
 interface BottomNavProps {
   tabs: TabConfig[];
-  elevated?: boolean;
 }
 
 function haptic() {
@@ -28,10 +27,7 @@ export default function BottomNav({ tabs }: BottomNavProps) {
     const el = navRef.current;
     if (!el) return;
     const update = () => {
-      document.documentElement.style.setProperty(
-        "--bottom-nav-height",
-        `${el.offsetHeight}px`
-      );
+      document.documentElement.style.setProperty("--bottom-nav-height", `${el.offsetHeight}px`);
     };
     update();
     const ro = new ResizeObserver(update);
@@ -50,14 +46,15 @@ export default function BottomNav({ tabs }: BottomNavProps) {
         left: 0,
         right: 0,
         zIndex: 50,
-        paddingBottom: "max(14px, env(safe-area-inset-bottom))",
-        paddingLeft: "max(16px, env(safe-area-inset-left))",
+        paddingBottom: "max(16px, env(safe-area-inset-bottom))",
+        paddingLeft:  "max(16px, env(safe-area-inset-left))",
         paddingRight: "max(16px, env(safe-area-inset-right))",
         paddingTop: 10,
         background: "transparent",
         pointerEvents: "none",
       }}
     >
+      {/* Floating pill nav — matches JSX BottomNav exactly */}
       <div
         style={{
           maxWidth: 480,
@@ -70,8 +67,8 @@ export default function BottomNav({ tabs }: BottomNavProps) {
           boxShadow: "0 10px 30px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)",
           display: "flex",
           alignItems: "center",
-          padding: "5px 6px",
-          gap: 2,
+          padding: "6px 8px",
+          gap: 4,
           pointerEvents: "all",
         }}
       >
@@ -101,11 +98,12 @@ function NavTab({ tab, totalTabs }: { tab: TabConfig; totalTabs: number }) {
       style={{
         flex: 1,
         display: "flex",
-        flexDirection: "column",
+        // Active tabs show icon + label in a row (matches JSX pattern)
+        flexDirection: isActive ? "row" : "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: 3,
-        padding: "9px 8px 7px",
+        gap: isActive ? 6 : 3,
+        padding: isActive ? "10px 16px" : "10px 8px",
         borderRadius: 24,
         border: "none",
         cursor: "pointer",
@@ -118,17 +116,12 @@ function NavTab({ tab, totalTabs }: { tab: TabConfig; totalTabs: number }) {
         minWidth: 0,
         WebkitTapHighlightColor: "transparent",
         outline: "none",
-        minHeight: 56,
+        minHeight: 52,
+        whiteSpace: "nowrap",
       }}
-      onMouseDown={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.95)";
-      }}
-      onMouseUp={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.transform = isActive ? "scale(1.02)" : "scale(1)";
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.transform = isActive ? "scale(1.02)" : "scale(1)";
-      }}
+      onMouseDown={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(0.95)"; }}
+      onMouseUp={e => { (e.currentTarget as HTMLButtonElement).style.transform = isActive ? "scale(1.02)" : "scale(1)"; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = isActive ? "scale(1.02)" : "scale(1)"; }}
     >
       {/* Icon */}
       <span
@@ -148,18 +141,13 @@ function NavTab({ tab, totalTabs }: { tab: TabConfig; totalTabs: number }) {
           <span
             style={{
               position: "absolute",
-              top: -5,
-              right: -7,
-              minWidth: 16,
-              height: 16,
+              top: -5, right: -7,
+              minWidth: 16, height: 16,
               borderRadius: 99,
               background: isActive ? "#ffffff" : "var(--gm-primary)",
               color: isActive ? "var(--gm-primary)" : "#ffffff",
-              fontSize: 9,
-              fontWeight: 700,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              fontSize: 9, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center",
               padding: "0 4px",
               boxShadow: "0 2px 6px rgba(255,122,0,0.35)",
               fontVariantNumeric: "tabular-nums",
@@ -171,20 +159,30 @@ function NavTab({ tab, totalTabs }: { tab: TabConfig; totalTabs: number }) {
         )}
       </span>
 
-      {/* Label — always visible */}
+      {/* Label */}
       <span
         style={{
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: isActive ? 700 : 500,
           color: isActive ? "#ffffff" : "#9C9C9C",
           letterSpacing: "-0.01em",
           whiteSpace: "nowrap",
+          overflow: "hidden",
+          // Expand label when active (matches JSX animation)
+          maxWidth: isActive ? 60 : 0,
+          opacity: isActive ? 1 : (totalTabs <= 3 ? 1 : 0),
           transition: "all 0.22s ease",
           lineHeight: 1,
         }}
       >
         {tab.label}
       </span>
+      {/* Always show label below icon when not active (classic tab style) */}
+      {!isActive && totalTabs <= 3 && (
+        <span style={{ fontSize: 11, fontWeight: 500, color: "#9C9C9C", letterSpacing: "-0.01em", lineHeight: 1 }}>
+          {tab.label}
+        </span>
+      )}
     </button>
   );
 }

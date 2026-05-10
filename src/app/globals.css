@@ -1,33 +1,31 @@
 @import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&display=swap");
 @import "tailwindcss";
 
-/* ─── Ghost Menu Design System v3 — Premium Orange ─────────────────────────── */
+/* ─── Ghost Menu Design System v4 — Premium Orange ─────────────────────────── */
 
 :root {
-  /* Primary */
   --gm-primary:        #FF7A00;
   --gm-primary-hover:  #FF8A1A;
   --gm-primary-pressed:#E86700;
   --gm-primary-soft:   #FFF1E6;
   --gm-primary-glow:   rgba(255,122,0,0.20);
+  --gm-peach:          #FFD7B5;
+  --gm-apricot:        #FFF1E6;
 
-  /* Backgrounds */
   --gm-bg:             #F6F2ED;
   --gm-bg-secondary:   #F3EEE8;
   --gm-surface:        #FFFDF9;
   --gm-surface-raised: #FFFFFF;
 
-  /* Borders */
-  --gm-border:         rgba(0,0,0,0.06);
+  --gm-border:         rgba(0,0,0,0.05);
   --gm-border-strong:  rgba(0,0,0,0.10);
+  --gm-divider:        rgba(0,0,0,0.04);
 
-  /* Text */
   --gm-text:           #1A1A1A;
   --gm-text-secondary: #6B6B6B;
   --gm-text-tertiary:  #9C9C9C;
   --gm-disabled:       #C8C5C0;
 
-  /* Pastel tints */
   --gm-tint-orange:  #FFF1E6;
   --gm-tint-pink:    #FDEEEF;
   --gm-tint-yellow:  #FFF6D8;
@@ -35,7 +33,6 @@
   --gm-tint-lavender:#F2EEFF;
   --gm-tint-blue:    #EEF3FF;
 
-  /* Semantic */
   --gm-success:        #3BA55D;
   --gm-success-bg:     #EAF8EC;
   --gm-success-border: #B8EDCA;
@@ -45,19 +42,17 @@
   --gm-danger:         #E74C3C;
   --gm-danger-bg:      #FEEFEE;
   --gm-danger-border:  #F5BBBA;
-  --gm-info:           #3B82F6;
+  --gm-info:           #5B8DEF;
   --gm-info-bg:        #EEF3FF;
   --gm-info-border:    #BFDBFE;
 
-  /* Shadows */
   --gm-shadow-sm:  0 2px 8px rgba(0,0,0,0.04);
   --gm-shadow-md:  0 8px 24px rgba(0,0,0,0.06);
   --gm-shadow-lg:  0 12px 32px rgba(0,0,0,0.08);
   --gm-shadow-xl:  0 20px 50px rgba(0,0,0,0.10);
   --gm-shadow-btn: 0 6px 18px rgba(255,122,0,0.20);
-  --gm-shadow-nav: 0 10px 30px rgba(0,0,0,0.08);
+  --gm-shadow-nav: 0 10px 30px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04);
 
-  /* Radii */
   --gm-radius-sm:    12px;
   --gm-radius-input: 18px;
   --gm-radius-md:    18px;
@@ -65,10 +60,7 @@
   --gm-radius-xl:    28px;
   --gm-radius-pill:  9999px;
 
-  /* Focus ring */
   --gm-focus-ring: 0 0 0 3px rgba(255,122,0,0.25);
-
-  /* Bottom nav */
   --bottom-nav-height: 96px;
 }
 
@@ -90,38 +82,38 @@ body {
   font-feature-settings: "tnum";
 }
 
-/* Cards */
+/* ─── Cards ─── */
 .gm-card {
-  background:    var(--gm-surface);
-  border:        1px solid var(--gm-border);
+  background: var(--gm-surface);
+  border: 1px solid var(--gm-border);
   border-radius: var(--gm-radius-lg);
-  box-shadow:    var(--gm-shadow-md);
+  box-shadow: var(--gm-shadow-md);
 }
 .gm-card-featured {
-  background:    var(--gm-surface);
-  border:        1px solid var(--gm-border);
+  background: var(--gm-surface);
+  border: 1px solid var(--gm-border);
   border-radius: var(--gm-radius-xl);
-  box-shadow:    var(--gm-shadow-md);
+  box-shadow: var(--gm-shadow-md);
 }
 
-/* Buttons */
+/* ─── Buttons ─── */
 .gm-btn-primary {
-  background:    var(--gm-primary);
-  color:         #FFFFFF;
-  border:        none;
+  background: var(--gm-primary);
+  color: #FFFFFF;
+  border: none;
   border-radius: var(--gm-radius-pill);
-  height:        54px;
-  padding:       0 28px;
-  font-size:     15px;
-  font-weight:   600;
-  font-family:   inherit;
-  cursor:        pointer;
-  transition:    background 0.2s, transform 0.15s, box-shadow 0.2s;
-  box-shadow:    var(--gm-shadow-btn);
-  display:       inline-flex;
-  align-items:   center;
+  height: 54px;
+  padding: 0 28px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: var(--gm-shadow-btn);
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  gap:           8px;
+  gap: 8px;
   letter-spacing: -0.01em;
 }
 .gm-btn-primary:hover  { background: var(--gm-primary-hover); box-shadow: 0 8px 24px rgba(255,122,0,0.28); }
@@ -129,157 +121,175 @@ body {
 .gm-btn-primary:disabled { background: var(--gm-disabled); box-shadow: none; cursor: not-allowed; opacity: 0.7; }
 
 .gm-btn-secondary {
-  background:    var(--gm-tint-orange);
-  color:         var(--gm-primary);
-  border:        none;
+  background: var(--gm-tint-orange);
+  color: var(--gm-primary);
+  border: none;
   border-radius: var(--gm-radius-pill);
-  height:        54px;
-  padding:       0 24px;
-  font-size:     15px;
-  font-weight:   600;
-  font-family:   inherit;
-  cursor:        pointer;
-  transition:    background 0.2s, transform 0.15s;
-  display:       inline-flex;
-  align-items:   center;
+  height: 54px;
+  padding: 0 24px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  gap:           8px;
+  gap: 8px;
 }
 .gm-btn-secondary:hover  { background: #FFE8D0; }
 .gm-btn-secondary:active { transform: scale(0.98); }
 
 .gm-btn-ghost {
-  background:    var(--gm-surface);
-  color:         var(--gm-text-secondary);
-  border:        1px solid var(--gm-border);
+  background: var(--gm-surface);
+  color: var(--gm-text-secondary);
+  border: 1px solid var(--gm-border);
   border-radius: var(--gm-radius-pill);
-  height:        44px;
-  padding:       0 18px;
-  font-size:     14px;
-  font-weight:   500;
-  font-family:   inherit;
-  cursor:        pointer;
-  transition:    background 0.15s, transform 0.1s;
-  display:       inline-flex;
-  align-items:   center;
+  height: 44px;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  gap:           6px;
+  gap: 6px;
 }
 .gm-btn-ghost:hover  { background: var(--gm-bg); }
 .gm-btn-ghost:active { transform: scale(0.97); }
 
 .gm-btn-danger {
-  background:    var(--gm-danger-bg);
-  color:         var(--gm-danger);
-  border:        1px solid var(--gm-danger-border);
+  background: var(--gm-danger-bg);
+  color: var(--gm-danger);
+  border: 1px solid var(--gm-danger-border);
   border-radius: var(--gm-radius-pill);
-  height:        40px;
-  padding:       0 16px;
-  font-size:     13px;
-  font-weight:   600;
-  font-family:   inherit;
-  cursor:        pointer;
-  transition:    background 0.15s;
-  display:       inline-flex;
-  align-items:   center;
-  gap:           6px;
+  height: 40px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 .gm-btn-danger:hover { background: #FEE2E2; }
 
-/* Inputs */
+/* ─── Pill chips (matching JSX PillButton) ─── */
+.gm-pill-active {
+  padding: 7px 18px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--gm-primary);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  box-shadow: var(--gm-shadow-btn);
+  font-family: inherit;
+}
+.gm-pill-inactive {
+  padding: 7px 18px;
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--gm-surface);
+  color: var(--gm-text-secondary);
+  border: 1px solid var(--gm-border);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.gm-pill-inactive:hover { background: var(--gm-bg); border-color: var(--gm-border-strong); }
+
+/* ─── Inputs ─── */
 .gm-input {
-  background:    var(--gm-surface);
-  border:        1px solid var(--gm-border);
+  background: var(--gm-surface);
+  border: 1px solid var(--gm-border);
   border-radius: var(--gm-radius-input);
-  height:        52px;
-  padding:       0 18px;
-  font-size:     15px;
-  font-family:   inherit;
-  color:         var(--gm-text);
-  width:         100%;
-  outline:       none;
-  transition:    border-color 0.2s, box-shadow 0.2s;
+  height: 52px;
+  padding: 0 18px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--gm-text);
+  width: 100%;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
 .gm-input::placeholder { color: var(--gm-text-tertiary); }
 .gm-input:focus { border-color: var(--gm-primary); box-shadow: var(--gm-focus-ring); }
 
-/* Chips */
+/* ─── Chips ─── */
 .gm-chip-active {
-  background:    var(--gm-primary);
-  color:         #FFFFFF;
+  background: var(--gm-primary);
+  color: #FFFFFF;
   border-radius: var(--gm-radius-pill);
-  padding:       8px 18px;
-  font-size:     13px;
-  font-weight:   600;
-  font-family:   inherit;
-  border:        none;
-  cursor:        pointer;
-  white-space:   nowrap;
-  transition:    background 0.2s, transform 0.1s;
-  box-shadow:    0 4px 12px rgba(255,122,0,0.22);
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 4px 12px rgba(255,122,0,0.22);
 }
-.gm-chip-active:active { transform: scale(0.97); }
-
 .gm-chip-inactive {
-  background:    var(--gm-surface);
-  color:         var(--gm-text-secondary);
+  background: var(--gm-surface);
+  color: var(--gm-text-secondary);
   border-radius: var(--gm-radius-pill);
-  padding:       8px 18px;
-  font-size:     13px;
-  font-weight:   500;
-  font-family:   inherit;
-  border:        1px solid var(--gm-border);
-  cursor:        pointer;
-  white-space:   nowrap;
-  transition:    background 0.15s, border-color 0.15s, transform 0.1s;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  border: 1px solid var(--gm-border);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
 }
 .gm-chip-inactive:hover  { background: var(--gm-bg); border-color: var(--gm-border-strong); }
 .gm-chip-inactive:active { transform: scale(0.97); }
 
-/* Status */
+/* ─── Status ─── */
 .gm-status { border-radius: var(--gm-radius-pill); padding: 5px 12px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; }
-.gm-status-pending    { background: var(--gm-tint-orange); color: #C2410C; }
-.gm-status-preparing  { background: var(--gm-tint-yellow); color: #92400E; }
-.gm-status-ready      { background: var(--gm-tint-green); color: #15803D; }
-.gm-status-served     { background: var(--gm-bg-secondary); color: var(--gm-text-secondary); }
-.gm-status-cancelled  { background: var(--gm-danger-bg); color: #B91C1C; }
-.gm-status-on_the_way { background: var(--gm-tint-blue); color: #1D4ED8; }
+.gm-status-pending    { background: var(--gm-tint-orange);   color: #C2410C; }
+.gm-status-preparing  { background: var(--gm-tint-yellow);   color: #92400E; }
+.gm-status-ready      { background: var(--gm-tint-green);    color: #15803D; }
+.gm-status-served     { background: var(--gm-bg-secondary);  color: var(--gm-text-secondary); }
+.gm-status-cancelled  { background: var(--gm-danger-bg);     color: #B91C1C; }
+.gm-status-on_the_way { background: var(--gm-tint-blue);     color: #1D4ED8; }
+.gm-status-completed  { background: var(--gm-tint-green);    color: #15803D; }
 
-/* Stat cards */
+/* ─── Stat cards ─── */
 .gm-stat {
-  background:    var(--gm-surface);
-  border:        1px solid var(--gm-border);
+  background: var(--gm-surface);
+  border: 1px solid var(--gm-border);
   border-radius: var(--gm-radius-lg);
-  box-shadow:    var(--gm-shadow-sm);
-  padding:       20px;
+  box-shadow: var(--gm-shadow-sm);
+  padding: 20px;
 }
-.gm-stat-value {
-  font-size:   26px;
-  font-weight: 700;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
-.gm-stat-label {
-  font-size:  12px;
-  color:      var(--gm-text-secondary);
-  margin-top: 4px;
-  font-weight: 500;
-}
+.gm-stat-value { font-size: 26px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.gm-stat-label { font-size: 12px; color: var(--gm-text-secondary); margin-top: 4px; font-weight: 500; }
 
-/* Header */
+/* ─── Header ─── */
 .gm-header {
   position: sticky;
   top: 0;
   z-index: 30;
-  background: rgba(255,253,249,0.92);
+  background: rgba(255,253,249,0.94);
   border-bottom: 1px solid var(--gm-border);
   box-shadow: var(--gm-shadow-sm);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
 }
 
-/* Toggle */
+/* ─── Toggle ─── */
 .gm-toggle {
   position: relative;
   width: 48px;
@@ -301,7 +311,7 @@ body {
   transition: left 0.25s cubic-bezier(0.34,1.2,0.64,1);
 }
 
-/* Add button */
+/* ─── Add button ─── */
 .gm-add-btn {
   width: 34px;
   height: 34px;
@@ -323,7 +333,7 @@ body {
 .gm-add-btn:hover  { transform: scale(1.1); box-shadow: 0 6px 16px rgba(255,122,0,0.38); }
 .gm-add-btn:active { transform: scale(0.94); }
 
-/* Icon button */
+/* ─── Icon button ─── */
 .gm-icon-btn {
   width: 40px;
   height: 40px;
@@ -340,14 +350,28 @@ body {
 }
 .gm-icon-btn:hover { background: var(--gm-bg); border-color: var(--gm-border-strong); }
 
-/* Scrollbar hide */
+/* Notification bell (apricot, matches JSX) */
+.gm-notif-btn {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  background: var(--gm-tint-orange);
+  border: none;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.gm-notif-btn:hover { background: #FFE8D0; }
+
+/* ─── Scrollbar hide ─── */
 .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 .scrollbar-none::-webkit-scrollbar { display: none; }
 
-/* Bottom Nav */
+/* ─── Bottom Nav ─── */
 .with-bottom-nav { padding-bottom: calc(var(--bottom-nav-height) + 16px); }
 
-/* Animations */
+/* ─── Animations ─── */
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(20px); }
   to   { opacity: 1; transform: translateY(0); }

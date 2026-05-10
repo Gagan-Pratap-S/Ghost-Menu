@@ -20,14 +20,21 @@ interface Props {
   onDelete: (id: number) => Promise<void>;
 }
 
-type Tab = "overview";
-
-function StatCard({ value, label, sub, accent = "var(--gm-primary)", tint = "var(--gm-tint-orange)" }: { value: string; label: string; sub?: string; accent?: string; tint?: string }) {
+// Matching JSX tint cards with icon + trend
+function MetricCard({ label, value, trend, sub, tint, icon }: {
+  label: string; value: string; trend?: string; sub?: string; tint: string; icon: string;
+}) {
   return (
-    <div style={{ background: tint, border: "1px solid var(--gm-border)", borderRadius: "var(--gm-radius-lg)", padding: 20 }}>
-      <div style={{ fontSize: 26, fontWeight: 700, color: accent, letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{value}</div>
-      <div style={{ fontSize: 12, color: "var(--gm-text-secondary)", marginTop: 4, fontWeight: 500 }}>{label}</div>
-      {sub && <div style={{ fontSize: 11, color: "var(--gm-text-tertiary)", marginTop: 2 }}>{sub}</div>}
+    <div style={{ background: tint, borderRadius: 24, padding: 18, boxShadow: "0 8px 24px rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.04)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <div>
+          <p style={{ fontSize: 12, color: "var(--gm-text-secondary)", margin: "0 0 6px", fontWeight: 500 }}>{label}</p>
+          <p style={{ fontSize: 24, fontWeight: 700, color: "var(--gm-text)", margin: "0 0 4px", letterSpacing: "-0.02em", fontVariantNumeric: "tabular-nums" }}>{value}</p>
+          {trend && <p style={{ fontSize: 11, color: "var(--gm-success)", fontWeight: 600, margin: 0 }}>↑ {trend}</p>}
+          {sub && <p style={{ fontSize: 11, color: "var(--gm-text-secondary)", margin: 0 }}>{sub}</p>}
+        </div>
+        <span style={{ fontSize: 24, opacity: 0.45 }}>{icon}</span>
+      </div>
     </div>
   );
 }
@@ -54,48 +61,50 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
   const needsAttention = useMemo(() => items.filter(i => i.views > 100 && i.clicks / i.views < 0.15), [items]);
   const promoteItems   = useMemo(() => items.filter(i => i.profit_tag === "high" && i.views < 50), [items]);
 
-
-  const handleUpdate = async (id: number, data: Partial<MenuItem>) => { await onUpdate(id, data); };
   const handleKitchenToggle = useCallback(() => {
     const next = kitchenStatus === "normal" ? "busy" : "normal";
     setKitchenStatus(next);
     if (restaurant?.id) updateKitchenStatus(restaurant.id, next === "busy");
   }, [kitchenStatus, restaurant?.id]);
+
   const handleLogout = async () => { await logout(); router.replace("/admin/login"); };
+
+  // Metrics matching JSX AdminDashboard
+  const metrics = [
+    { label: "Total Views", value: totalViews.toLocaleString(), trend: "+12%", tint: "var(--gm-tint-orange)", icon: "📦" },
+    { label: "Total Clicks", value: totalClicks.toLocaleString(), trend: "+18%", tint: "var(--gm-tint-pink)", icon: "💰" },
+    { label: "Active Menu", value: String(available), sub: "Dishes", tint: "var(--gm-tint-yellow)", icon: "🍽️" },
+    { label: "Avg CTR", value: `${avgCTR}%`, trend: `${items.length} items`, tint: "var(--gm-tint-green)", icon: "👥" },
+  ];
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--gm-bg)" }}>
-      {/* Header */}
-      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "rgba(255,253,249,0.94)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)", borderBottom: "1px solid var(--gm-border)", boxShadow: "var(--gm-shadow-sm)" }}>
-        <div style={{ maxWidth: 480, margin: "0 auto", padding: "12px 20px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      {/* ── Header matching JSX admin header ── */}
+      <header style={{ position: "sticky", top: 0, zIndex: 30, background: "rgba(255,253,249,0.96)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", borderBottom: "1px solid var(--gm-border)", boxShadow: "var(--gm-shadow-sm)" }}>
+        <div style={{ maxWidth: 480, margin: "0 auto", padding: "16px 20px 12px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <h1 style={{ fontSize: 17, fontWeight: 600, color: "var(--gm-text)", margin: 0 }}>{restaurant?.name ?? "Admin"}</h1>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 11, fontWeight: 500, color: kitchenStatus === "normal" ? "var(--gm-success)" : "var(--gm-danger)" }}>
-                    {kitchenStatus === "normal" ? "Open" : "Busy"}
-                  </span>
-                  <button onClick={handleKitchenToggle}
-                    style={{ position: "relative", width: 36, height: 20, borderRadius: 99, border: "none", cursor: "pointer", background: kitchenStatus === "normal" ? "var(--gm-success)" : "var(--gm-danger)", transition: "background 0.2s" }}>
-                    <span style={{ position: "absolute", top: 2, width: 16, height: 16, background: "#fff", borderRadius: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.2)", transition: "left 0.2s", left: kitchenStatus === "normal" ? "calc(100% - 18px)" : 2 }} />
-                  </button>
-                </div>
+              <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--gm-text)", margin: "0 0 2px" }}>Dashboard</h1>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 14 }}>👋</span>
+                <span style={{ fontSize: 13, color: "var(--gm-text-secondary)" }}>
+                  Welcome back, {restaurant?.name ?? "Admin"}
+                </span>
               </div>
-              <p style={{ fontSize: 12, color: "var(--gm-text-tertiary)", marginTop: 1 }}>{session?.user.email}</p>
+              <p style={{ fontSize: 12, color: "var(--gm-text-tertiary)", margin: "2px 0 0" }}>Here&apos;s what&apos;s happening today.</p>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <a href={restaurant?.slug ? `/menu/${restaurant.slug}` : "#"}
-                target="_blank" rel="noopener noreferrer"
-                onClick={e => { if (!restaurant?.slug) e.preventDefault(); }}
-                style={{ fontSize: 13, fontWeight: 500, color: restaurant?.slug ? "var(--gm-text-secondary)" : "var(--gm-disabled)", textDecoration: "none", padding: "6px 12px", borderRadius: 10, border: "1px solid var(--gm-border)", background: "var(--gm-surface)", cursor: restaurant?.slug ? "pointer" : "not-allowed" }}>
-                Preview ↗
-              </a>
-              <a href="/admin/qr"
-                style={{ fontSize: 13, fontWeight: 500, color: "var(--gm-text-secondary)", textDecoration: "none", padding: "6px 12px", borderRadius: 10, border: "1px solid var(--gm-border)", background: "var(--gm-surface)" }}>
-                QR
-              </a>
-              <button onClick={() => setShowLogoutConfirm(true)} className="gm-btn-danger">Sign out</button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+              {/* Kitchen toggle */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 11, fontWeight: 500, color: kitchenStatus === "normal" ? "var(--gm-success)" : "var(--gm-danger)" }}>
+                  {kitchenStatus === "normal" ? "Open" : "Busy"}
+                </span>
+                <button onClick={handleKitchenToggle}
+                  style={{ position: "relative", width: 40, height: 22, borderRadius: 99, border: "none", cursor: "pointer", background: kitchenStatus === "normal" ? "var(--gm-success)" : "var(--gm-danger)", transition: "background 0.2s" }}>
+                  <span style={{ position: "absolute", top: 2, width: 18, height: 18, background: "#fff", borderRadius: "50%", boxShadow: "0 1px 3px rgba(0,0,0,0.2)", transition: "left 0.2s", left: kitchenStatus === "normal" ? "calc(100% - 20px)" : 2 }} />
+                </button>
+              </div>
+              <button className="gm-notif-btn" aria-label="Notifications">🔔</button>
             </div>
           </div>
 
@@ -103,18 +112,20 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
           <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
             <a href="/admin/menu" style={{ flex: 1, textAlign: "center", padding: "7px 0", borderRadius: "var(--gm-radius-pill)", border: "1px solid var(--gm-border)", fontSize: 13, fontWeight: 500, color: "var(--gm-text-secondary)", textDecoration: "none", background: "var(--gm-bg)" }}>Menu ({items.length})</a>
             <a href="/admin/orders" style={{ flex: 1, textAlign: "center", padding: "7px 0", borderRadius: "var(--gm-radius-pill)", border: "1px solid var(--gm-border)", fontSize: 13, fontWeight: 500, color: "var(--gm-text-secondary)", textDecoration: "none", background: "var(--gm-bg)" }}>Live Orders</a>
+            <button onClick={() => setShowLogoutConfirm(true)} className="gm-btn-danger" style={{ height: 34, fontSize: 12, padding: "0 12px" }}>Sign out</button>
           </div>
         </div>
       </header>
 
-      <div style={{ maxWidth: 480, margin: "0 auto", padding: "20px 20px 120px" }}>
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "20px 16px 120px" }}>
         {loading ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {[0,1,2,3].map(i => <div key={i} className="animate-skeleton" style={{ height: 80, borderRadius: 20 }} />)}
           </div>
         ) : (
           <div className="animate-fadeIn" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {/* Kitchen mode */}
+
+            {/* Kitchen mode card */}
             <div className="gm-card" style={{ padding: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>
                 <p style={{ fontSize: 14, fontWeight: 600, color: "var(--gm-text)", margin: 0 }}>Kitchen Mode</p>
@@ -128,136 +139,96 @@ export default function AdminDashboard({ items, loading, restaurant, onAdd, onUp
               </button>
             </div>
 
-            {/* Stats grid */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <StatCard value={totalViews.toLocaleString()} label="Total Views" sub="all items" tint="var(--gm-tint-orange)" />
-              <StatCard value={totalClicks.toLocaleString()} label="Total Clicks" accent="#3B82F6" sub="all items" tint="var(--gm-tint-blue)" />
-              <StatCard value={`${avgCTR}%`} label="Avg CTR" accent="var(--gm-success)" sub="clicks / views" tint="var(--gm-tint-green)" />
-              <StatCard value={`${available}/${items.length}`} label="Available" accent="#8B5CF6" sub="menu items" tint="var(--gm-tint-lavender)" />
+            {/* Metrics grid — pastel tint cards like JSX */}
+            <div>
+              <SectionLabel>📊 Today&apos;s Overview</SectionLabel>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {metrics.map(m => (
+                  <MetricCard key={m.label} {...m} />
+                ))}
+              </div>
             </div>
 
-            {/* Top performers */}
+            {/* Top performers — matching JSX popular dishes style */}
             <div>
-              <SectionLabel>🏆 Top Performers</SectionLabel>
-              <div className="gm-card" style={{ overflow: "hidden", padding: 0 }}>
-                {topPerformers.map((item, idx) => (
-                  <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: idx < topPerformers.length - 1 ? "1px solid var(--gm-border)" : "none" }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--gm-text-tertiary)", width: 16, flexShrink: 0 }}>#{idx + 1}</span>
-                    <div style={{ position: "relative", width: 36, height: 36, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: "var(--gm-bg)" }}>
-                      <Image src={item.image} alt={item.name} fill sizes="36px" className="object-cover"
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <SectionLabel>🏆 Popular Dishes</SectionLabel>
+                <a href="/admin/menu" style={{ fontSize: 13, color: "var(--gm-primary)", fontWeight: 600, textDecoration: "none" }}>View All</a>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {topPerformers.slice(0, 3).map((item, idx) => (
+                  <div key={item.id} style={{
+                    background: "var(--gm-surface)",
+                    borderRadius: 18,
+                    padding: "12px 14px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    boxShadow: "var(--gm-shadow-md)",
+                    border: "1px solid var(--gm-border)",
+                  }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "var(--gm-text-tertiary)", width: 16, flexShrink: 0 }}>#{idx + 1}</span>
+                    <div style={{ position: "relative", width: 48, height: 48, borderRadius: 14, overflow: "hidden", flexShrink: 0, background: "var(--gm-bg)" }}>
+                      <Image src={item.image} alt={item.name} fill sizes="48px" className="object-cover"
                         onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 13, fontWeight: 600, color: "var(--gm-text)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</p>
-                      <p style={{ fontSize: 12, color: "var(--gm-text-tertiary)", margin: 0 }}>{item.clicks}c · {item.views}v</p>
+                      <h4 style={{ fontSize: 14, fontWeight: 600, color: "var(--gm-text)", margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</h4>
+                      <p style={{ fontSize: 12, color: "var(--gm-text-secondary)", margin: 0 }}>{item.clicks} orders</p>
                     </div>
-                    <span style={{ fontSize: 11, fontWeight: 500, padding: "3px 8px", borderRadius: 99, flexShrink: 0,
-                      ...(item.profit_tag === "high" ? { background: "var(--gm-success-bg)", color: "#15803D", border: "1px solid var(--gm-success-border)" }
-                        : item.profit_tag === "medium" ? { background: "var(--gm-warning-bg)", color: "#92400E", border: "1px solid var(--gm-warning-border)" }
-                        : { background: "var(--gm-bg)", color: "var(--gm-text-secondary)", border: "1px solid var(--gm-border)" }) }}>
-                      {item.profit_tag}
-                    </span>
-                    <button onClick={() => onUpdate(item.id, { available: !item.available })}
-                      style={{ fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 99, cursor: "pointer", flexShrink: 0, border: "none",
-                        ...(item.available ? { background: "var(--gm-success-bg)", color: "#15803D" } : { background: "var(--gm-danger-bg)", color: "#B91C1C" }) }}>
-                      {item.available ? "avail" : "86'd"}
-                    </button>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: "var(--gm-text)", flexShrink: 0 }}>{formatPrice(item.price)}</span>
                   </div>
                 ))}
               </div>
             </div>
 
+            {/* Needs attention */}
             {needsAttention.length > 0 && (
               <div>
-                <SectionLabel>⚠️ Needs Attention</SectionLabel>
-                <div style={{ background: "var(--gm-warning-bg)", border: "1px solid var(--gm-warning-border)", borderRadius: 20, padding: 16 }}>
-                  <p style={{ fontSize: 13, color: "#92400E", fontWeight: 500, marginBottom: 8 }}>High views, low clicks — update image or name</p>
-                  {needsAttention.slice(0, 4).map(item => (
-                    <div key={item.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
-                      <span style={{ color: "#78350F", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, marginRight: 8 }}>{item.name}</span>
-                      <span style={{ color: "#92400E", whiteSpace: "nowrap" }}>{item.views}v / {item.clicks}c</span>
+                <SectionLabel>⚠️ Low CTR — Consider Promoting</SectionLabel>
+                <div className="gm-card" style={{ overflow: "hidden", padding: 0 }}>
+                  {needsAttention.slice(0, 3).map((item, idx) => (
+                    <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: idx < needsAttention.length - 1 ? "1px solid var(--gm-border)" : "none" }}>
+                      <span style={{ fontSize: 12, color: "var(--gm-text-tertiary)", width: 16 }}>#{idx + 1}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: "var(--gm-text)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</p>
+                        <p style={{ fontSize: 11, color: "var(--gm-text-secondary)", margin: 0 }}>{item.views} views · {item.clicks} clicks</p>
+                      </div>
+                      <a href="/admin/menu" style={{ fontSize: 12, fontWeight: 600, color: "var(--gm-primary)", textDecoration: "none", background: "var(--gm-tint-orange)", padding: "4px 10px", borderRadius: 99 }}>Edit</a>
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {promoteItems.length > 0 && (
-              <div>
-                <SectionLabel>📈 Promote These</SectionLabel>
-                <div style={{ background: "var(--gm-success-bg)", border: "1px solid var(--gm-success-border)", borderRadius: 20, padding: 16 }}>
-                  <p style={{ fontSize: 13, color: "#15803D", fontWeight: 500, marginBottom: 8 }}>High-profit, low visibility — feature them</p>
-                  {promoteItems.slice(0, 4).map(item => (
-                    <div key={item.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 4 }}>
-                      <span style={{ color: "#166534", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, marginRight: 8 }}>{item.name}</span>
-                      <span style={{ color: "#15803D" }} className="tabular-nums price">{formatPrice(item.price)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* Preview link */}
+            {restaurant?.slug && (
+              <a href={`/menu/${restaurant.slug}`} target="_blank" rel="noopener noreferrer"
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "14px", borderRadius: "var(--gm-radius-lg)", border: "1px dashed var(--gm-border)", background: "var(--gm-surface)", color: "var(--gm-text-secondary)", textDecoration: "none", fontSize: 13, fontWeight: 500 }}>
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                Preview menu ↗
+              </a>
             )}
           </div>
         )}
       </div>
 
-      <AdminBottomNav restaurantId={restaurant?.id} />
-
-      {/* Logout confirm */}
+      {/* Logout confirmation */}
       {showLogoutConfirm && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 20px" }}>
-          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)" }} onClick={() => setShowLogoutConfirm(false)} />
-          <div className="gm-card animate-slideUp" style={{ position: "relative", padding: 24, width: "100%", maxWidth: 320 }}>
-            <p style={{ fontSize: 16, fontWeight: 600, color: "var(--gm-text)", marginBottom: 6 }}>Sign out?</p>
-            <p style={{ fontSize: 14, color: "var(--gm-text-secondary)", marginBottom: 20 }}>You'll need to sign in again to access the admin panel.</p>
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }} className="animate-fadeIn">
+          <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }} onClick={() => setShowLogoutConfirm(false)} />
+          <div style={{ position: "relative", background: "var(--gm-surface)", borderRadius: "var(--gm-radius-xl)", padding: 28, maxWidth: 320, width: "100%", boxShadow: "var(--gm-shadow-xl)" }} className="animate-slideUp">
+            <p style={{ fontSize: 18, fontWeight: 700, color: "var(--gm-text)", marginBottom: 8 }}>Sign out?</p>
+            <p style={{ fontSize: 14, color: "var(--gm-text-secondary)", marginBottom: 24 }}>You&apos;ll need to log back in to access the admin panel.</p>
             <div style={{ display: "flex", gap: 10 }}>
-              <button onClick={() => setShowLogoutConfirm(false)} className="gm-btn-secondary" style={{ flex: 1, height: 44 }}>Cancel</button>
-              <button onClick={handleLogout} style={{ flex: 1, height: 44, borderRadius: 14, border: "none", background: "var(--gm-danger)", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>Sign Out</button>
+              <button onClick={() => setShowLogoutConfirm(false)} className="gm-btn-ghost" style={{ flex: 1, height: 44 }}>Cancel</button>
+              <button onClick={handleLogout} className="gm-btn-danger" style={{ flex: 1, height: 44 }}>Sign out</button>
             </div>
           </div>
         </div>
       )}
-    </div>
-  );
-}
 
-function AdminItemRow({ item, indicator, onEdit, onToggleAvailable, onToggleFeatured, onDelete }: {
-  item: MenuItem;
-  indicator: { label: string; suggestion: string } | null;
-  onEdit: () => void;
-  onToggleAvailable: () => void;
-  onToggleFeatured: () => void;
-  onDelete: () => void;
-}) {
-  return (
-    <div style={{ background: "var(--gm-surface)", border: "1px solid var(--gm-border)", borderRadius: "var(--gm-radius-md)", padding: 14, boxShadow: "var(--gm-shadow-sm)", opacity: item.available ? 1 : 0.55 }}>
-      <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
-        <div style={{ position: "relative", width: 52, height: 52, borderRadius: 12, overflow: "hidden", flexShrink: 0, background: "var(--gm-bg)" }}>
-          <Image src={item.image} alt={item.name} fill sizes="52px" className="object-cover"
-            onError={e => { (e.target as HTMLImageElement).src = FALLBACK_IMAGE; }} />
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 14, fontWeight: 600, color: "var(--gm-text)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.name}</p>
-          <p style={{ fontSize: 12, color: "var(--gm-text-secondary)", margin: 0 }} className="price tabular-nums">{formatPrice(item.price)} · {item.category}</p>
-          <p style={{ fontSize: 12, color: "var(--gm-text-tertiary)", margin: 0 }}>{item.views}v · {item.clicks}c</p>
-        </div>
-        {indicator && (
-          <span style={{ fontSize: 10, fontWeight: 500, color: "var(--gm-text-tertiary)", background: "var(--gm-bg)", border: "1px solid var(--gm-border)", borderRadius: 8, padding: "4px 8px", alignSelf: "flex-start", flexShrink: 0, maxWidth: 72, textAlign: "right", lineHeight: 1.3 }}>
-            {indicator.label}
-          </span>
-        )}
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
-        <button onClick={onEdit} style={{ padding: "7px 0", borderRadius: 10, border: "1px solid var(--gm-border)", background: "var(--gm-bg)", color: "var(--gm-text-secondary)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>✏️ Edit</button>
-        <button onClick={onToggleAvailable} style={{ padding: "7px 0", borderRadius: 10, border: "none", fontSize: 12, fontWeight: 500, cursor: "pointer",
-          ...(item.available ? { background: "var(--gm-success-bg)", color: "#15803D" } : { background: "var(--gm-danger-bg)", color: "#B91C1C" }) }}>
-          {item.available ? "✓ Avail" : "✗ Sold"}
-        </button>
-        <button onClick={onToggleFeatured} style={{ padding: "7px 0", borderRadius: 10, border: "none", fontSize: 12, fontWeight: 500, cursor: "pointer",
-          ...(item.featured ? { background: "#FFFBEB", color: "#92400E" } : { background: "var(--gm-bg)", color: "var(--gm-text-secondary)" }) }}>
-          {item.featured ? "⭐ Feat" : "Feature"}
-        </button>
-        <button onClick={onDelete} style={{ padding: "7px 0", borderRadius: 10, border: "none", background: "var(--gm-danger-bg)", color: "#B91C1C", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>🗑</button>
-      </div>
+      <AdminBottomNav restaurantId={restaurant?.id} />
     </div>
   );
 }
