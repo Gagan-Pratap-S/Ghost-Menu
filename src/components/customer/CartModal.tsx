@@ -36,8 +36,8 @@ export default function CartModal({ open, onClose, restaurantId, guestName, memb
 
   const TAX_RATE = 0.05;
   const subtotal = totalPrice;
-  const tax = subtotal * TAX_RATE;
-  const total = subtotal + tax;
+  const tax = Math.round(subtotal * TAX_RATE * 100) / 100;
+  const total = Math.round((subtotal + tax) * 100) / 100;
 
   useEffect(() => {
     if (open) { lockScroll(); return unlockScroll; }
@@ -70,7 +70,7 @@ export default function CartModal({ open, onClose, restaurantId, guestName, memb
       member_count:  memberCount ?? 1,
       table_number:  tableNumber || "QR",
       items:         items.map(i => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity })),
-      total:         total,
+      total:         Math.round(totalPrice),
     });
 
     if (error) {
