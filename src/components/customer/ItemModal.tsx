@@ -49,12 +49,12 @@ export default function ItemModal({ item, onClose, onComboItemClick, restaurantI
       <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.35)", backdropFilter: "blur(8px)" }}
         className="animate-fadeIn" onClick={onClose} />
 
-      <div style={{ position: "relative", width: "100%", maxWidth: 480, background: "var(--gm-surface)", borderTopLeftRadius: 28, borderTopRightRadius: 28, maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--gm-shadow-xl)", paddingBottom: "calc(32px + env(safe-area-inset-bottom))" }}
-        className="animate-slideUp">
+      <div style={{ position: "relative", width: "100%", maxWidth: 480, background: "var(--gm-surface)", borderTopLeftRadius: "var(--gm-radius-xl)", borderTopRightRadius: "var(--gm-radius-xl)", maxHeight: "90vh", overflowY: "auto", boxShadow: "var(--gm-shadow-xl)", paddingBottom: "calc(32px + env(safe-area-inset-bottom))" }}
+        className="gm-animate-slide-up">
 
         {/* Close button */}
-        <button onClick={onClose} aria-label="Close"
-          style={{ position: "absolute", top: 12, right: 12, zIndex: 10, width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: "50%", background: "rgba(0,0,0,0.35)", border: "none", color: "#fff", fontSize: 18, cursor: "pointer" }}>
+        <button onClick={onClose} aria-label="Close" className="gm-icon-btn"
+          style={{ position: "absolute", top: 12, right: 12, zIndex: 10, background: "rgba(0,0,0,0.35)", color: "#fff", fontSize: 18 }}>
           ×
         </button>
 
@@ -103,8 +103,8 @@ export default function ItemModal({ item, onClose, onComboItemClick, restaurantI
               <p style={{ fontSize: 13, color: "#92400E", marginBottom: 12 }}>Pairs perfectly with:</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {comboItems.map(ci => (
-                  <button key={ci.id} onClick={() => onComboItemClick?.(ci)}
-                    style={{ display: "flex", alignItems: "center", gap: 6, borderRadius: 10, padding: "8px 12px", fontSize: 13, fontWeight: 500, background: "var(--gm-surface)", border: "1px solid var(--gm-border)", color: "var(--gm-text)", cursor: "pointer" }}>
+                  <button key={ci.id} onClick={() => onComboItemClick?.(ci)} className="gm-btn-ghost"
+                    style={{ display: "flex", alignItems: "center", gap: 6, borderRadius: "var(--gm-radius-md)", padding: "8px 12px", fontSize: 13, fontWeight: 500 }}>
                     <span>{ci.name}</span>
                     <span style={{ fontWeight: 700, color: "var(--gm-primary)" }}>+{formatPrice(ci.price)}</span>
                   </button>
@@ -118,29 +118,27 @@ export default function ItemModal({ item, onClose, onComboItemClick, restaurantI
             <button onClick={(e) => {
               handleAdd();
               const btn = e.currentTarget as HTMLButtonElement;
-              btn.classList.add('animate-cartPop');
-              setTimeout(() => btn.classList.remove('animate-cartPop'), 300);
-            }} className="gm-btn-primary" style={{ width: "100%", height: 52, fontSize: 15 }}>
+              btn.classList.add('gm-animate-cart-pop');
+              setTimeout(() => btn.classList.remove('gm-animate-cart-pop'), 300);
+            }} className="gm-btn-primary" style={{ width: "100%", fontSize: "var(--gm-font-label)" }}>
               Add to Cart · {formatPrice(item.price)}
             </button>
           ) : (
             <div style={{ display: "flex", alignItems: "center", gap: 12, background: "var(--gm-bg)", borderRadius: "var(--gm-radius-md)", padding: "12px 16px" }}>
-              <button onClick={() => decrement(item.id)}
-                style={{ width: 40, height: 40, borderRadius: 50, border: "1px solid var(--gm-border)", background: "var(--gm-surface)", color: "var(--gm-text)", fontSize: 18, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "transform 0.15s" }}>−</button>
+              <button onClick={() => decrement(item.id)} className="gm-icon-btn" style={{ width: 40, height: 40, fontSize: 18, fontWeight: 600 }}>−</button>
               <span style={{ flex: 1, textAlign: "center", fontSize: 15, fontWeight: 700, color: "var(--gm-text)" }} className="tabular-nums">{qty} in cart</span>
               <button onClick={() => {
                 increment(item.id);
                 const btn = event?.currentTarget as HTMLButtonElement;
                 if (btn) {
-                  btn.classList.add('animate-cartPop');
-                  setTimeout(() => btn.classList.remove('animate-cartPop'), 300);
+                  btn.classList.add('gm-animate-cart-pop');
+                  setTimeout(() => btn.classList.remove('gm-animate-cart-pop'), 300);
                 }
-              }}
-                style={{ width: 40, height: 40, borderRadius: 50, border: "none", background: "var(--gm-primary)", color: "#fff", fontSize: 18, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 2px 8px rgba(255,122,0,0.3)" }}>+</button>
+              }} className="gm-add-btn" style={{ width: 40, height: 40, fontSize: 18 }}>+</button>
             </div>
           )}
 
-          <button onClick={onClose} style={{ width: "100%", marginTop: 12, height: 44, borderRadius: "var(--gm-radius-pill)", border: "1px solid var(--gm-border)", background: "transparent", color: "var(--gm-text-secondary)", fontSize: 14, cursor: "pointer" }}>
+          <button onClick={onClose} className="gm-btn-ghost" style={{ width: "100%", marginTop: 12 }}>
             Back to Menu
           </button>
         </div>

@@ -75,9 +75,9 @@ function Img({ src, alt, sizes, priority }: { src: string; alt: string; sizes: s
 function QtyControls({ qty, onInc, onDec }: { qty: number; onInc: (e: React.MouseEvent) => void; onDec: (e: React.MouseEvent) => void }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 4 }} onClick={e => e.stopPropagation()}>
-      <button onClick={onDec} style={{ width: 24, height: 24, borderRadius: 8, border: "1px solid var(--gm-border)", background: "var(--gm-bg)", color: "var(--gm-text)", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+      <button onClick={onDec} className="gm-icon-btn" style={{ width: 28, height: 28, fontSize: 14, fontWeight: 600 }}>−</button>
       <span style={{ fontSize: 13, fontWeight: 700, color: "var(--gm-text)", width: 16, textAlign: "center" }} className="tabular-nums">{qty}</span>
-      <button onClick={onInc} style={{ width: 24, height: 24, borderRadius: 8, border: "none", background: "var(--gm-primary)", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+      <button onClick={onInc} className="gm-add-btn" style={{ width: 28, height: 28, fontSize: 14 }}>+</button>
     </div>
   );
 }
@@ -88,12 +88,12 @@ function AddButton({ onAdd }: { onAdd: (e: React.MouseEvent) => void }) {
     onAdd(e);
     const btn = btnRef.current;
     if (btn) {
-      btn.classList.add('animate-cartPop');
-      setTimeout(() => btn.classList.remove('animate-cartPop'), 300);
+      btn.classList.add('gm-animate-cart-pop');
+      setTimeout(() => btn.classList.remove('gm-animate-cart-pop'), 300);
     }
   };
   return (
-    <button ref={btnRef} onClick={handleClick} style={{ width: 32, height: 32, borderRadius: "50%", border: "none", background: "var(--gm-primary)", color: "#fff", fontSize: 16, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "var(--gm-shadow-btn)", willChange: "transform" }}>+</button>
+    <button ref={btnRef} onClick={handleClick} className="gm-add-btn">+</button>
   );
 }
 
@@ -141,15 +141,15 @@ export default function ItemCard({ item, onClick, variant = "list", priority = f
     pointerStart.current = null;
   };
 
-  const cardStyle = { background: "var(--gm-surface)", border: "1px solid var(--gm-border)", boxShadow: "var(--gm-shadow-sm)" };
+  const cardStyle = { background: "var(--gm-surface-card)", border: "1px solid var(--gm-border)", boxShadow: "var(--gm-shadow-card)", borderRadius: "var(--gm-radius-xl)" };
 
   if (variant === "quick") {
     return (
       <button ref={el => { cardRef.current = el; }} onClick={onClick} aria-label={item.name}
         className="group focus:outline-none"
-        style={{ flexShrink: 0, width: 144, borderRadius: "var(--gm-radius-lg)", overflow: "hidden", ...cardStyle, opacity: isUnavail ? 0.5 : 1, cursor: "pointer", border: "none", padding: 0, transition: "box-shadow 0.15s, transform 0.15s" }}
-        onMouseEnter={e => { e.currentTarget.style.boxShadow = "var(--gm-shadow-md)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-        onMouseLeave={e => { e.currentTarget.style.boxShadow = "var(--gm-shadow-sm)"; e.currentTarget.style.transform = "none"; }}>
+        style={{ flexShrink: 0, width: 144, overflow: "hidden", ...cardStyle, opacity: isUnavail ? 0.5 : 1, cursor: "pointer", border: "none", padding: 0, transition: "box-shadow 0.2s ease, transform 0.2s ease" }}
+        onMouseEnter={e => { e.currentTarget.style.boxShadow = "var(--gm-shadow-lg)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+        onMouseLeave={e => { e.currentTarget.style.boxShadow = "var(--gm-shadow-card)"; e.currentTarget.style.transform = "none"; }}>
         <div style={{ position: "relative", height: 96, background: "var(--gm-bg)" }}>
           <Img src={item.image} alt={item.name} sizes="144px" priority={priority} />
           {item.tag && <Tag tag={item.tag} />}
@@ -173,9 +173,9 @@ export default function ItemCard({ item, onClick, variant = "list", priority = f
     return (
       <button ref={el => { cardRef.current = el; }} onClick={onClick} aria-label={item.name}
         className="group focus:outline-none"
-        style={{ width: "100%", borderRadius: "var(--gm-radius-lg)", overflow: "hidden", ...cardStyle, opacity: isUnavail ? 0.5 : 1, cursor: "pointer", border: "none", padding: 0, transition: "box-shadow 0.15s, transform 0.15s" }}
-        onMouseEnter={e => { e.currentTarget.style.boxShadow = "var(--gm-shadow-md)"; e.currentTarget.style.transform = "translateY(-1px)"; }}
-        onMouseLeave={e => { e.currentTarget.style.boxShadow = "var(--gm-shadow-sm)"; e.currentTarget.style.transform = "none"; }}>
+        style={{ width: "100%", overflow: "hidden", ...cardStyle, opacity: isUnavail ? 0.5 : 1, cursor: "pointer", border: "none", padding: 0, transition: "box-shadow 0.2s ease, transform 0.2s ease" }}
+        onMouseEnter={e => { e.currentTarget.style.boxShadow = "var(--gm-shadow-lg)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
+        onMouseLeave={e => { e.currentTarget.style.boxShadow = "var(--gm-shadow-card)"; e.currentTarget.style.transform = "none"; }}>
         <div style={{ position: "relative", height: 112, background: "var(--gm-bg)" }}>
           <Img src={item.image} alt={item.name} sizes="(max-width:448px) 50vw, 224px" priority={priority} />
           {item.tag && <Tag tag={item.tag} />}
@@ -202,10 +202,10 @@ export default function ItemCard({ item, onClick, variant = "list", priority = f
   return (
     <button ref={el => { cardRef.current = el; }} onClick={onClick} aria-label={item.name}
       onPointerDown={onPointerDown} onPointerUp={onPointerUp}
-      style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, ...cardStyle, borderRadius: "var(--gm-radius-md)", padding: 14, cursor: "pointer", textAlign: "left", transition: "box-shadow 0.15s, border-color 0.15s", opacity: isUnavail ? 0.5 : 1 }}
+      style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, ...cardStyle, borderRadius: "var(--gm-radius-md)", padding: 14, cursor: "pointer", textAlign: "left", transition: "box-shadow 0.2s ease, transform 0.2s ease", opacity: isUnavail ? 0.5 : 1 }}
       className="focus:outline-none"
-      onMouseEnter={e => { if (!isUnavail) { (e.currentTarget as HTMLElement).style.borderColor = "var(--gm-primary)"; (e.currentTarget as HTMLElement).style.boxShadow = "var(--gm-shadow-md)"; } }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = "var(--gm-border)"; (e.currentTarget as HTMLElement).style.boxShadow = "var(--gm-shadow-sm)"; }}>
+      onMouseEnter={e => { if (!isUnavail) { (e.currentTarget as HTMLElement).style.boxShadow = "var(--gm-shadow-lg)"; (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; } }}
+      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.boxShadow = "var(--gm-shadow-card)"; (e.currentTarget as HTMLElement).style.transform = "none"; }}>
       <div style={{ position: "relative", width: 68, height: 68, borderRadius: "var(--gm-radius-sm)", overflow: "hidden", flexShrink: 0, background: "var(--gm-bg)" }}>
         <Img src={item.image} alt={item.name} sizes="68px" priority={priority} />
         {isUnavail && <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.7)" }}><span style={{ fontSize: 8, fontWeight: 700, color: "var(--gm-text-secondary)", textTransform: "uppercase", textAlign: "center" }}>Un<br/>avail</span></div>}
